@@ -1,0 +1,2814 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<title>班级打卡 · 谁还没交一眼看清</title>
+
+<!-- 拼音库：异步加载，失败自动回退 -->
+<script async src="https://cdn.jsdelivr.net/npm/pinyin-pro@3/dist/index.js" onload="window.__pyLoadOk=true" onerror="window.__pyLoadFail=true"></script>
+<!-- 二维码生成库 -->
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+
+<style>
+/* ==========================================================================
+   1. 设计变量 —— 糖果暖色系
+   ========================================================================== */
+:root{
+    --bg:         #FFF9F3;
+    --ink:        #5A4A42;
+    --ink-soft:   #8A7568;
+    --muted:      #B3A094;
+
+    --pink:       #FF8FA3;
+    --pink-soft:  #FFD9E0;
+    --orange:     #FFB86B;
+    --green:      #7ED9A0;
+    --green-soft: #E2F8EA;
+
+    --card:       #FFFFFF;
+    --line:       #F2E8DE;
+    --danger:     #E5674E;
+
+    --radius:     18px;
+    --shadow:     0 2px 6px rgba(255,143,163,.10), 0 6px 18px rgba(255,143,163,.08);
+    --shadow-sm:  0 1px 3px rgba(140,110,90,.10);
+}
+
+/* ==========================================================================
+   2. 基础重置
+   ========================================================================== */
+*{
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+html, body{
+    height: 100%;
+    overflow: hidden;
+}
+
+body{
+    font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB",
+                 "Source Han Sans SC", "Noto Sans CJK SC", system-ui, sans-serif;
+    color: var(--ink);
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
+    background-color: var(--bg);
+    background-image:
+        radial-gradient(circle at 8% 12%,  rgba(255,214,224,.55) 0%, transparent 38%),
+        radial-gradient(circle at 92% 14%, rgba(255,228,196,.45) 0%, transparent 34%),
+        radial-gradient(circle at 88% 88%, rgba(201,228,255,.45) 0%, transparent 38%),
+        radial-gradient(circle at 12% 92%, rgba(214,245,214,.40) 0%, transparent 34%);
+    background-attachment: fixed;
+}
+
+button, input, textarea{
+    font-family: inherit;
+    color: inherit;
+    -webkit-user-select: auto;
+    user-select: auto;
+}
+
+button{
+    border: none;
+    background: none;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+/* ==========================================================================
+   3. 整体骨架
+   ========================================================================== */
+.app{
+    width: 100%;
+    max-width: 1920px;
+    margin: 0 auto;
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px 14px 12px;
+    overflow: hidden;
+}
+
+/* ---------- 3.1 顶栏 ---------- */
+.topbar{
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 48px;
+}
+
+.tabs-wrap{
+    flex: none;
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+.tabs{
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    background: #FFF1E6;
+    border-radius: 16px;
+    box-shadow: inset 0 1px 2px rgba(255,184,107,.18);
+    overflow-x: auto;
+    scrollbar-width: none;
+    max-width: 60vw;
+}
+.tabs::-webkit-scrollbar{ display: none; }
+
+.tab{
+    height: 42px;
+    padding: 0 20px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--muted);
+    letter-spacing: .5px;
+    transition: background .18s ease, color .18s ease, transform .12s ease;
+    white-space: nowrap;
+}
+.tab:active{ transform: scale(.95); }
+.tab.active{
+    background: linear-gradient(135deg, #FF9FAE 0%, #FF8FA3 100%);
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(255,143,163,.40);
+}
+
+.add-tab-btn{
+    width: 42px;
+    height: 42px;
+    flex: none;
+    border-radius: 12px;
+    background: #FFF1E6;
+    color: var(--pink);
+    font-size: 22px;
+    font-weight: bold;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-sm);
+}
+.add-tab-btn:active{ transform: scale(.92); }
+
+.progress-wrap{
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    padding: 0 6px;
+}
+
+.prog-text{
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: .5px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+}
+.prog-text .num{ color: var(--pink); font-size: 24px; }
+
+.prog-bar{
+    flex: 1;
+    min-width: 60px;
+    height: 16px;
+    background: #FFEBE0;
+    border-radius: 99px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 3px rgba(255,143,163,.15);
+}
+.prog-fill{
+    height: 100%;
+    width: 0%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #FFB86B 0%, #FF8FA3 60%, #FF7E96 100%);
+    transition: width .5s cubic-bezier(.34,.9,.32,1);
+    box-shadow: 0 0 8px rgba(255,143,163,.5);
+}
+
+.icon-btn{
+    flex: none;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform .12s ease, background .18s ease;
+}
+.icon-btn:active{ transform: scale(.9); }
+.icon-btn.off{ background: #F5ECE4; opacity: .7; }
+
+/* ---------- 3.2 棋盘：左右两列 ---------- */
+.board{
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    gap: 12px;
+    flex-direction: row;
+}
+
+.column{
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border-radius: 24px;
+    padding: 10px 12px 12px;
+    transition: background .2s ease;
+}
+
+.pending-col{
+    background: #FFFFFF;
+    box-shadow: inset 0 0 0 2.5px #FFE3E9, 0 6px 20px rgba(255,143,163,.10);
+}
+.passed-col{
+    background: #F4FCF6;
+    box-shadow: inset 0 0 0 2.5px #CFF0D9, 0 6px 20px rgba(126,217,160,.12);
+}
+
+.col-head{
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2px 6px 8px;
+    margin-bottom: 6px;
+    border-bottom: 2px dashed;
+}
+.pending-col .col-head{ border-color: #FFE3E9; }
+.passed-col .col-head{ border-color: #D6F0DE; }
+
+.col-title{
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: .5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.pending-col .col-title{ color: #E76B87; }
+.passed-col .col-title{ color: #3E9E68; }
+
+.col-count{
+    font-size: 15px;
+    font-weight: 800;
+    padding: 2px 12px;
+    border-radius: 99px;
+    font-variant-numeric: tabular-nums;
+}
+.pending-col .col-count{ background: #FFE9EE; color: #E76B87; }
+.passed-col .col-count{ background: #D8F4E1; color: #3E9E68; }
+
+/* 网格 */
+.grid{
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
+    gap: 8px;
+    align-content: start;
+    padding: 2px;
+    scrollbar-width: none;
+}
+.grid::-webkit-scrollbar{ display: none; }
+
+/* ---------- 3.3 卡片（变大版） ---------- */
+.card{
+    position: relative;
+    height: 92px;
+    border-radius: 20px;
+    background: var(--card);
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 8px 6px;
+    transition: transform .12s ease, box-shadow .16s ease;
+    will-change: transform;
+    overflow: hidden;
+}
+.card:active{ transform: scale(.93); }
+
+.card::before{
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 5px;
+    background: var(--stripe, #FFD9E0);
+    opacity: .9;
+}
+
+.avatar{
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 800;
+    color: #fff;
+    overflow: hidden;
+    background: #FFD9E0;
+    box-shadow: inset 0 -2px 4px rgba(0,0,0,.06);
+}
+.avatar img{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.avatar.txt{
+    color: #6A5548;
+    font-size: 18px;
+    letter-spacing: 0;
+}
+
+.cname{
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--ink);
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    letter-spacing: .2px;
+}
+.cname.long{ font-size: 14px; }
+
+.passed-col .card{
+    height: 82px;
+    background: #FFFFFF;
+    box-shadow: 0 1px 3px rgba(126,217,160,.18), 0 3px 10px rgba(126,217,160,.10);
+}
+.passed-col .card::before{ background: var(--green); height: 4px; }
+.passed-col .avatar{ width: 34px; height: 34px; font-size: 17px; }
+.passed-col .cname{ font-size: 15px; color: #3E7A55; }
+.passed-col .cname.long{ font-size: 13px; }
+
+body.edit-mode .pending-col .card{
+    box-shadow: 0 0 0 3px var(--orange), var(--shadow);
+}
+body.edit-mode .passed-col .card{
+    box-shadow: 0 0 0 3px var(--orange), var(--shadow-sm);
+}
+
+.empty-tip{
+    grid-column: 1 / -1;
+    padding: 48px 12px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.8;
+}
+.empty-tip .big{ font-size: 40px; display: block; margin-bottom: 8px; }
+
+/* ---------- 3.4 右侧底部区域（时钟 & 麦克风） ---------- */
+.right-dash{
+    flex: none;
+    margin-top: 10px;
+    background: rgba(255,255,255,0.6);
+    border-radius: 18px;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid #E6F6EC;
+}
+
+.big-clock{
+    font-size: 54px;
+    font-weight: 900;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 2px;
+    line-height: 1;
+    text-shadow: 0 2px 4px rgba(90,74,66,.1);
+}
+
+.mic-box{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+.mic-btn{
+    background: #FFF1E6;
+    color: #C97B4E;
+    font-size: 15px;
+    font-weight: 800;
+    padding: 8px 16px;
+    border-radius: 12px;
+    transition: all .2s;
+}
+.mic-btn.active{
+    background: linear-gradient(135deg, #FF9FAE 0%, #FF8FA3 100%);
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(255,143,163,.4);
+}
+.wave-bars{
+    display: flex;
+    gap: 5px;
+    height: 36px;
+    align-items: flex-end;
+}
+.wave-bar{
+    width: 8px;
+    height: 10%;
+    background: var(--pink);
+    border-radius: 4px;
+    transition: height 0.08s ease-out;
+}
+
+/* ---------- 3.5 底部工具栏 ---------- */
+.bottombar{
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tb{
+    height: 50px;
+    padding: 0 22px;
+    border-radius: 15px;
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--ink);
+    letter-spacing: .3px;
+    white-space: nowrap;
+    transition: transform .12s ease, background .16s ease;
+}
+.tb:active{ transform: scale(.95); }
+.tb.primary{
+    background: linear-gradient(135deg, #FF9FAE 0%, #FF8FA3 100%);
+    color: #fff;
+    box-shadow: 0 3px 12px rgba(255,143,163,.40);
+}
+.tb.more{
+    width: 50px;
+    padding: 0;
+    font-size: 24px;
+    margin-left: auto;
+    line-height: 1;
+}
+
+/* ==========================================================================
+   4. 点击特效层
+   ========================================================================== */
+#fxLayer{
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    overflow: hidden;
+}
+
+.fx-item{
+    position: fixed;
+    pointer-events: none;
+    will-change: transform, opacity;
+    font-size: 20px;
+    line-height: 1;
+    z-index: 9999;
+}
+
+/* ==========================================================================
+   5. 弹窗通用
+   ========================================================================== */
+.modal{
+    position: fixed;
+    inset: 0;
+    background: rgba(90,74,66,.42);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 100;
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+}
+.modal.active{ display: flex; }
+
+.modal-card{
+    width: 100%;
+    max-width: 520px;
+    max-height: 88vh;
+    background: #fff;
+    border-radius: 24px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 24px 70px rgba(90,74,66,.32);
+    animation: popIn .22s cubic-bezier(.2,1.2,.4,1);
+}
+@keyframes popIn{
+    from{ transform: scale(.94); opacity: 0; }
+    to  { transform: scale(1);   opacity: 1; }
+}
+
+.modal-head{
+    flex: none;
+    padding: 18px 20px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+.modal-head h3{
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: .3px;
+    color: var(--ink);
+}
+.modal-head .x{
+    width: 40px;
+    height: 40px;
+    flex: none;
+    border-radius: 50%;
+    background: #FFF1E6;
+    color: var(--ink-soft);
+    font-size: 22px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-body{
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px 20px 16px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.modal-foot{
+    flex: none;
+    display: flex;
+    gap: 10px;
+    padding: 12px 20px 18px;
+    border-top: 1px solid var(--line);
+}
+
+.btn-main, .btn-ghost{
+    flex: 1;
+    height: 50px;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: .3px;
+}
+.btn-main{
+    background: linear-gradient(135deg, #FF9FAE 0%, #FF8FA3 100%);
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(255,143,163,.35);
+}
+.btn-ghost{ background: #FFF1E6; color: var(--ink); }
+.btn-main:active, .btn-ghost:active{ transform: scale(.98); }
+
+.field{ margin-bottom: 14px; }
+.field label{
+    display: block;
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+    letter-spacing: .3px;
+}
+.field input[type=text],
+.field input[type=date],
+.field textarea{
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid var(--line);
+    border-radius: 13px;
+    font-size: 16px;
+    background: #FFFCF9;
+    outline: none;
+    transition: border-color .16s ease;
+}
+.field input:focus, .field textarea:focus{ border-color: var(--pink); }
+.field textarea{ resize: vertical; min-height: 90px; line-height: 1.5; }
+
+/* ==========================================================================
+   6. 菜单弹层
+   ========================================================================== */
+.menu{
+    position: fixed;
+    inset: 0;
+    background: rgba(90,74,66,.32);
+    display: none;
+    z-index: 90;
+}
+.menu.active{ display: block; }
+
+.menu-panel{
+    position: absolute;
+    right: 14px;
+    bottom: 76px;
+    width: 244px;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 18px 50px rgba(90,74,66,.32);
+    padding: 8px;
+    overflow: hidden;
+    animation: menuIn .18s cubic-bezier(.2,1.1,.4,1);
+}
+@keyframes menuIn{
+    from{ transform: translateY(10px) scale(.96); opacity: 0; }
+    to  { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.menu-item{
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    height: 50px;
+    padding: 0 14px;
+    border-radius: 13px;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ink);
+    overflow: hidden;
+    text-align: left;
+}
+.menu-item:active{ background: #FFF1E6; }
+.menu-item .ico{
+    width: 22px;
+    font-size: 18px;
+    text-align: center;
+    flex: none;
+}
+.menu-item.danger{ color: var(--danger); }
+
+.reset-fill{
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0%;
+    background: #FDE6E1;
+    pointer-events: none;
+    transition: width .1s linear;
+}
+.menu-item.pressing .reset-fill{
+    width: 100%;
+    transition: width 1.5s linear;
+}
+.menu-item > *:not(.reset-fill){ position: relative; z-index: 1; }
+
+/* ==========================================================================
+   7. 名单编辑
+   ========================================================================== */
+.roster-list{
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+.roster-row{
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+.roster-row input{
+    height: 44px;
+    padding: 0 10px;
+    border: 2px solid var(--line);
+    border-radius: 11px;
+    font-size: 15px;
+    background: #FFFCF9;
+    outline: none;
+    min-width: 0;
+}
+.roster-row input:focus{ border-color: var(--pink); }
+.roster-row .ri-sid{ width: 66px; text-align: center; flex: none; font-variant-numeric: tabular-nums; }
+.roster-row .ri-name{ flex: 1; }
+.roster-row .del{
+    width: 44px;
+    height: 44px;
+    flex: none;
+    border-radius: 11px;
+    background: #FDEDEA;
+    color: var(--danger);
+    font-size: 22px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.add-row{
+    width: 100%;
+    height: 48px;
+    border-radius: 13px;
+    background: #FFF1E6;
+    color: #C97B4E;
+    font-size: 15px;
+    font-weight: 800;
+    margin-bottom: 14px;
+}
+
+.bulk-box{
+    background: #FFFAF5;
+    border-radius: 13px;
+    padding: 12px;
+    margin-bottom: 6px;
+    border: 1.5px dashed #FFE3C4;
+}
+.bulk-box summary{
+    font-size: 14px;
+    font-weight: 800;
+    color: #C97B4E;
+    cursor: pointer;
+    outline: none;
+    margin-bottom: 2px;
+}
+.bulk-box textarea{
+    width: 100%;
+    min-height: 120px;
+    margin-top: 10px;
+    padding: 10px;
+    border: 2px solid var(--line);
+    border-radius: 11px;
+    font-size: 15px;
+    line-height: 1.6;
+    background: #fff;
+    outline: none;
+    resize: vertical;
+}
+.bulk-box button{
+    margin-top: 8px;
+    height: 44px;
+    padding: 0 20px;
+    border-radius: 11px;
+    background: linear-gradient(135deg, #FF9FAE 0%, #FF8FA3 100%);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 800;
+}
+
+/* ==========================================================================
+   8. 记录 / 历史 / 头像 / 备份
+   ========================================================================== */
+.report-box{
+    background: #FFFAF5;
+    border-radius: 16px;
+    padding: 16px;
+}
+.report-title{
+    text-align: center;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--ink);
+    margin-bottom: 10px;
+}
+.report-meta{
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.8;
+    padding-bottom: 10px;
+    border-bottom: 2px dashed var(--line);
+    margin-bottom: 12px;
+}
+.report-meta b{ color: var(--ink); font-weight: 800; }
+
+.report-sec{ margin-bottom: 14px; }
+.report-sec h4{
+    font-size: 14px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    letter-spacing: .3px;
+}
+.report-sec.ok h4{ color: #3E9E68; }
+.report-sec.no h4{ color: #E76B87; }
+.tags{ display: flex; flex-wrap: wrap; gap: 6px; }
+.tag{
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    background: #F4ECE4;
+    color: var(--ink);
+}
+.report-sec.ok .tag{ background: #E2F8EA; color: #3E8A5C; }
+.report-sec.no .tag{ background: #FFE9EE; color: #D9567A; }
+.tag img{ width: 18px; height: 18px; border-radius: 50%; object-fit: cover; }
+
+/* 历史 */
+.his-row{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 6px;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+    transition: background .2s;
+    border-radius: 8px;
+}
+.his-row:active{ background: #FFF1E6; }
+.his-row:last-child{ border-bottom: none; }
+.his-date{
+    font-size: 13px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    width: 85px;
+    flex: none;
+}
+.his-name{
+    flex: 1;
+    font-size: 16px;
+    font-weight: 800;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.his-num{
+    font-size: 15px;
+    font-weight: 800;
+    color: #3E9E68;
+    font-variant-numeric: tabular-nums;
+    flex: none;
+}
+.empty-hint{
+    text-align: center;
+    color: var(--muted);
+    font-size: 15px;
+    padding: 30px 0;
+    font-weight: 700;
+    line-height: 1.9;
+}
+
+/* 头像编辑 */
+.upload-label{
+    display: block;
+    width: 100%;
+    height: 50px;
+    line-height: 50px;
+    text-align: center;
+    background: linear-gradient(135deg, #FF9FAE 0%, #FF8FA3 100%);
+    color: #fff;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(255,143,163,.30);
+}
+#avatarCamera, #avatarFile{ display: none; }
+
+.emoji-grid{
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+}
+.emoji-item{
+    aspect-ratio: 1;
+    border-radius: 13px;
+    background: #FFF6EE;
+    font-size: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid transparent;
+}
+.emoji-item.selected{
+    border-color: var(--pink);
+    background: #FFE9EE;
+}
+
+/* 轻提示 */
+#toast{
+    position: fixed;
+    left: 50%;
+    bottom: 92px;
+    transform: translateX(-50%) translateY(12px);
+    background: rgba(90,74,66,.93);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 10px 22px;
+    border-radius: 24px;
+    max-width: 78%;
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .22s ease, transform .22s ease;
+    z-index: 300;
+}
+#toast.show{
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* ==========================================================================
+   9. 响应式：窄屏上下两栏（<768px 强制上下，横屏平板保持左右）
+   ========================================================================== */
+@media (max-width: 768px){
+    .app{ padding: 8px; gap: 8px; }
+
+    .topbar{ flex-wrap: wrap; row-gap: 8px; }
+    .tabs-wrap{ width: 100%; }
+    .tabs{ max-width: 85vw; }
+    .progress-wrap{
+        order: 3;
+        flex-basis: 100%;
+        width: 100%;
+        padding: 0;
+    }
+    .icon-btn{ order: 2; margin-left: auto; width: 44px; height: 44px; font-size: 18px; }
+    .tab{ padding: 0 14px; font-size: 15px; height: 38px; }
+    .prog-text{ font-size: 16px; }
+    .prog-text .num{ font-size: 18px; }
+
+    .board{ flex-direction: column; gap: 8px; }
+    .column{ border-radius: 20px; padding: 8px 10px 10px; }
+    .col-title{ font-size: 14px; }
+
+    .grid{ grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 6px; }
+    .card{ height: 76px; border-radius: 16px; }
+    .avatar{ width: 30px; height: 30px; font-size: 16px; }
+    .cname{ font-size: 14px; }
+    .cname.long{ font-size: 12px; }
+    .passed-col .card{ height: 70px; }
+    .passed-col .avatar{ width: 26px; height: 26px; font-size: 14px; }
+    .passed-col .cname{ font-size: 13px; }
+
+    .right-dash{ flex-direction: column; gap: 10px; padding: 12px; }
+    .big-clock{ font-size: 42px; }
+
+    .tb{ height: 46px; padding: 0 14px; font-size: 15px; flex: 1; }
+    .tb.more{ flex: none; width: 46px; }
+    .menu-panel{ right: 8px; left: 8px; width: auto; bottom: 66px; }
+}
+
+@media (min-width: 1600px){
+    .grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+    .card{ height: 100px; }
+    .avatar{ width: 44px; height: 44px; font-size: 22px; }
+    .cname{ font-size: 18px; }
+    .cname.long{ font-size: 16px; }
+    .passed-col .card{ height: 90px; }
+    .passed-col .avatar{ width: 38px; height: 38px; font-size: 18px; }
+    .passed-col .cname{ font-size: 16px; }
+    .big-clock{ font-size: 64px; }
+}
+
+@media (prefers-reduced-motion: reduce){
+    *{ animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+    <!-- 顶栏 -->
+    <header class="topbar">
+        <div class="tabs-wrap">
+            <div class="tabs" id="tabs"></div>
+            <button class="add-tab-btn" id="addTabBtn" title="自定义新任务">＋</button>
+        </div>
+
+        <div class="progress-wrap">
+            <div class="prog-text" id="progText">已交 <span class="num">0</span> / 0</div>
+            <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+        </div>
+        
+        <button class="icon-btn" id="soundBtn" title="声音开关">🔊</button>
+    </header>
+
+    <!-- 左右两列 -->
+    <main class="board">
+        <section class="column pending-col">
+            <div class="col-head">
+                <span class="col-title">🐣 还没交</span>
+                <span class="col-count" id="pendingCount">0</span>
+            </div>
+            <div class="grid" id="pendingGrid"></div>
+        </section>
+
+        <section class="column passed-col">
+            <div class="col-head">
+                <span class="col-title">✅ 已经交啦</span>
+                <span class="col-count" id="passedCount">0</span>
+            </div>
+            <div class="grid" id="passedGrid"></div>
+            
+            <!-- 底部时间与麦克风 -->
+            <div class="right-dash">
+                <div class="big-clock" id="bigClock">08:00:00</div>
+                <div class="mic-box">
+                    <button class="mic-btn" id="micBtn">🎤 开启音浪</button>
+                    <div class="wave-bars" id="waveBars">
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 底部工具栏 -->
+    <footer class="bottombar">
+        <button class="tb" id="undoBtn">↩ 撤销</button>
+        <button class="tb primary" id="saveTodayBtn">存今天</button>
+        <button class="tb" id="csvBtn">导出 CSV</button>
+        <button class="tb more" id="moreBtn">⋯</button>
+    </footer>
+
+</div>
+
+<!-- 更多菜单 -->
+<div class="menu" id="menu">
+    <div class="menu-panel">
+        <button class="menu-item" data-action="roster">
+            <span class="ico">👥</span><span>名单管理</span>
+        </button>
+        <button class="menu-item" data-action="avatar">
+            <span class="ico">🖼</span><span>换头像</span>
+        </button>
+        <button class="menu-item" data-action="record">
+            <span class="ico">📋</span><span>今日记录</span>
+        </button>
+        <button class="menu-item" data-action="history">
+            <span class="ico">🕘</span><span>历史存档</span>
+        </button>
+        <button class="menu-item" data-action="qrcode">
+            <span class="ico">🔳</span><span>分享 / 扫码</span>
+        </button>
+        <button class="menu-item" data-action="backup">
+            <span class="ico">💾</span><span>备份 / 恢复</span>
+        </button>
+        <button class="menu-item danger" id="resetItem">
+            <span class="reset-fill"></span>
+            <span class="ico">⚠️</span><span>长按 1.5 秒重置</span>
+        </button>
+    </div>
+</div>
+
+<!-- 弹窗：自定义新任务 -->
+<div class="modal" id="addTabModal">
+    <div class="modal-card">
+        <div class="modal-head">
+            <h3>新建自定义任务</h3>
+            <button class="x" data-close="addTabModal">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="field">
+                <label>任务名称</label>
+                <input type="text" id="newTabName" maxlength="10" placeholder="例如：数学作业、英语听写">
+            </div>
+            <p style="font-size:14px;color:#8A7568;line-height:1.6;">新任务将独立记录打卡状态，名单默认复制自“早读”。</p>
+        </div>
+        <div class="modal-foot">
+            <button class="btn-ghost" data-close="addTabModal">取消</button>
+            <button class="btn-main" id="confirmAddTabBtn">创建</button>
+        </div>
+    </div>
+</div>
+
+<!-- 弹窗：存今天 -->
+<div class="modal" id="saveModal">
+    <div class="modal-card">
+        <div class="modal-head">
+            <h3>存入今天的打卡记录</h3>
+            <button class="x" data-close="saveModal">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="field">
+                <label>项目名称</label>
+                <input type="text" id="projectName" maxlength="20" placeholder="例如：早读课文背诵">
+            </div>
+            <div class="field">
+                <label>日期</label>
+                <input type="text" id="saveDate" readonly style="background:#FFF6EE;color:#B3A094;">
+            </div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn-ghost" data-close="saveModal">取消</button>
+            <button class="btn-main" id="confirmSaveBtn">确认存档</button>
+        </div>
+    </div>
+</div>
+
+<!-- 弹窗：名单管理 -->
+<div class="modal" id="rosterModal">
+    <div class="modal-card">
+        <div class="modal-head">
+            <h3>名单管理 · <span id="rosterTabName">早读</span></h3>
+            <button class="x" data-close="rosterModal">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="roster-list" id="rosterList"></div>
+            <button class="add-row" id="addStudentBtn">＋ 添加学生</button>
+
+            <details class="bulk-box">
+                <summary>批量导入（覆盖当前名单）</summary>
+                <textarea id="bulkInput" placeholder="每行一个学生，支持以下两种写法：&#10;张三&#10;02 李四&#10;&#10;带学号时会使用你填的学号"></textarea>
+                <button id="bulkImportBtn">导入名单</button>
+            </details>
+        </div>
+        <div class="modal-foot">
+            <button class="btn-ghost" data-close="rosterModal">取消</button>
+            <button class="btn-main" id="saveRosterBtn">保存名单</button>
+        </div>
+    </div>
+</div>
+
+<!-- 弹窗：换头像 -->
+<div class="modal" id="avatarModal">
+    <div class="modal-card">
+        <div class="modal-head">
+            <h3 id="avatarTitle">更换头像</h3>
+            <button class="x" data-close="avatarModal">×</button>
+        </div>
+        <div class="modal-body">
+            <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+                <label class="upload-label" for="avatarCamera" style="margin-bottom:0;">📷 现场拍照</label>
+                <label class="upload-label" for="avatarFile" style="margin-bottom:0;background:#FFB86B;">🖼️ 从相册选</label>
+            </div>
+            <input type="file" id="avatarCamera" accept="image/*" capture="environment">
+            <input type="file" id="avatarFile" accept="image/*">
+
+            <div class="field"><label>或者选一个表情</label></div>
+            <div class="emoji-grid" id="emojiGrid"></div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn-ghost" id="avatarResetBtn">恢复默认</button>
+            <button class="btn-main" data-close="avatarModal">完成</button>
+        </div>
+    </div>
+</div>
+
+<!-- 弹窗：今日记录 / 历史详情 -->
+<div class="modal" id="recordModal">
+    <div class="modal-card">
+        <div class="modal-head">
+            <h3 id="recordTitle">今日记录</h3>
+            <button class="x" data-close="recordModal">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="report-box" id="recordBody"></div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn-main" data-close="recordModal">关闭</button>
+        </div>
+    </div>
+</div>
+
+<!-- 弹窗：历史列表 -->
+<div class="modal" id="historyModal">
+    <div class="modal-card">
+        <div class="modal-head">
+            <h3>历史存档</h3>
+            <button class="x" data-close="historyModal">×</button>
+        </div>
+        <div class="modal-body">
+            <div id="historyList"></div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn-main" data-close="historyModal">关闭</button>
+        </div>
+    </div>
+</div>
+
+<!-- 弹窗：二维码 -->
+<div class="modal" id="qrcodeModal">
+    <div class="modal-card">
+        <div class="modal-head">
+            <h3>扫码打开本任务</h3>
+            <button class="x" data-close="qrcodeModal">×</button>
+        </div>
+        <div class="modal-body" style="text-align: center;">
+            <p style="font-size:14px;color:#8A7568;margin-bottom:15px;">手机微信扫码，直接打开并切换到当前任务</p>
+            <div id="qrcodeBox" style="display: flex; justify-content: center; padding: 10px; background: #fff; border-radius: 12px; min-height: 200px; align-items: center;"></div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn-main" data-close="qrcodeModal">关闭</button>
+        </div>
+    </div>
+</div>
+
+<!-- 弹窗：备份恢复 -->
+<div class="modal" id="backupModal">
+    <div class="modal-card">
+        <div class="modal-head">
+            <h3>备份 / 恢复</h3>
+            <button class="x" data-close="backupModal">×</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:14px;line-height:1.7;color:#8A7568;margin-bottom:14px;">
+                数据已自动保存在本机浏览器中。若要换设备或清理缓存，
+                请点「复制备份」把文字存到微信收藏，下次粘回来点「恢复」。
+            </p>
+            <div class="field">
+                <textarea id="backupArea" placeholder="备份数据会显示在这里…"></textarea>
+            </div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn-ghost" id="copyBackupBtn">复制备份</button>
+            <button class="btn-main" id="restoreBackupBtn">粘贴恢复</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function () {
+'use strict';
+
+/* ==========================================================================
+   1. 常量与数据结构
+   ========================================================================== */
+const STORAGE_KEY  = 'daka_v5';
+const DATA_VERSION = 5;
+
+const DEFAULT_TABS = [
+    { id: 'morning',    name: '早读' },
+    { id: 'homework',   name: '作业' },
+    { id: 'recitation', name: '背诵' }
+];
+
+const DEFAULT_NAMES = [
+    '郭津杭', '李思蕊', '刘承晔', '刘恩山', '刘翰璋',
+    '刘昊哲', '刘铭浩', '刘依牧', '刘怡甯', '刘羽默',
+    '刘振凯', '刘子霖', '刘梓颖桦', '王溪芮', '许钰涵',
+    '杨淇淋', '杨熙硕', '杨惜雅', '张晨旭', '张美兰',
+    '张恬伊', '张熙若霖', '张栩飒', '张钰澍', '张悦晴',
+    '张运达', '张泽航', '张梓栋', '张梓濠'
+];
+
+const EMOJIS = ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮',
+                '🐷','🐸','🐵','🐔','🐧','🐦','🐤','🦄','🐝','🦋','🐞','🐢',
+                '🐬','🐳','🦖','🦕','🐙','🦉'];
+
+const CANDY = [
+    '#FFB3C1', '#FFC98F', '#FFE08A', '#9BE3B4',
+    '#9CCEFF', '#C6B2F0', '#8FE0D8', '#FF9E9E'
+];
+
+let state = null;
+let pinyinReady = false;
+const pinyinCache = new Map();
+const undoStack = [];
+let editMode = false;
+let editingStudentId = null;
+let audioCtx = null;
+
+const $  = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+
+const elPendingGrid = $('#pendingGrid');
+const elPassedGrid  = $('#passedGrid');
+const elPendingCnt  = $('#pendingCount');
+const elPassedCnt   = $('#passedCount');
+const elProgText    = $('#progText');
+const elProgFill    = $('#progFill');
+const elBigClock    = $('#bigClock');
+const elTabs        = $('#tabs');
+const elSoundBtn    = $('#soundBtn');
+
+/* ==========================================================================
+   2. 通用工具
+   ========================================================================== */
+function todayStr() {
+    const d = new Date();
+    return d.getFullYear() + '-' +
+           String(d.getMonth() + 1).padStart(2, '0') + '-' +
+           String(d.getDate()).padStart(2, '0');
+}
+
+function esc(s) {
+    return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+let toastTimer = null;
+function toast(msg) {
+    const el = $('#toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+function reduceMotion() {
+    return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function openModal(id)  { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+function currentTab() {
+    return state.tabs[state.activeTab] || Object.values(state.tabs)[0];
+}
+
+function candyOf(id) {
+    return CANDY[(Math.max(1, id) - 1) % CANDY.length];
+}
+
+/* ==========================================================================
+   3. 状态初始化 / 持久化
+   ========================================================================== */
+function createTab(def, names) {
+    return {
+        id: def.id,
+        name: def.name,
+        students: names.map((n, i) => ({
+            id: i + 1,
+            name: n,
+            sid: String(i + 1).padStart(2, '0'),
+            avatarType: 'text',
+            avatarData: ''
+        })),
+        passed: {},
+        seq: 0
+    };
+}
+
+function loadState() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw);
+    } catch (e) { return null; }
+}
+
+function initState() {
+    let s = loadState();
+
+    if (!s || !s.tabs) {
+        s = {
+            version: DATA_VERSION,
+            activeTab: DEFAULT_TABS[0].id,
+            soundOn: true,
+            date: todayStr(),
+            tabs: {},
+            history: []
+        };
+        DEFAULT_TABS.forEach(def => { s.tabs[def.id] = createTab(def, DEFAULT_NAMES); });
+    }
+
+    // 补齐结构
+    Object.keys(s.tabs).forEach(k => {
+        const t = s.tabs[k];
+        if (!t.passed) t.passed = {};
+        if (typeof t.seq !== 'number') t.seq = 0;
+        if (!Array.isArray(t.students)) t.students = [];
+    });
+
+    // 跨天自动清空
+    if (s.date !== todayStr()) {
+        s.date = todayStr();
+        Object.keys(s.tabs).forEach(k => {
+            s.tabs[k].passed = {};
+            s.tabs[k].seq = 0;
+        });
+    }
+
+    if (!s.tabs[s.activeTab]) s.activeTab = Object.keys(s.tabs)[0];
+    if (!Array.isArray(s.history)) s.history = [];
+    if (typeof s.soundOn !== 'boolean') s.soundOn = true;
+
+    return s;
+}
+
+function save() {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+        toast('本地存储空间不足');
+    }
+}
+
+/* ==========================================================================
+   4. URL 参数解析
+   ========================================================================== */
+function parseUrlParams() {
+    try {
+        const params = new URLSearchParams(location.search);
+        const taskName = params.get('task');
+        if (taskName) {
+            let targetId = null;
+            for (const id in state.tabs) {
+                if (state.tabs[id].name === taskName) {
+                    targetId = id; break;
+                }
+            }
+            if (targetId) {
+                state.activeTab = targetId;
+            } else {
+                const newId = 'custom_' + Date.now();
+                const sourceStudents = state.tabs[DEFAULT_TABS[0].id] 
+                    ? JSON.parse(JSON.stringify(state.tabs[DEFAULT_TABS[0].id].students))
+                    : createTab({id:newId,name:taskName}, DEFAULT_NAMES).students;
+                state.tabs[newId] = {
+                    id: newId, name: taskName, students: sourceStudents,
+                    passed: {}, seq: 0
+                };
+                state.activeTab = newId;
+            }
+            save();
+            history.replaceState({}, document.title, location.pathname);
+        }
+    } catch (e) {}
+}
+
+/* ==========================================================================
+   5. 拼音排序
+   ========================================================================== */
+function detectPinyin() {
+    try {
+        if (window.pinyinPro && typeof window.pinyinPro.pinyin === 'function') {
+            const r = window.pinyinPro.pinyin('张', { toneType: 'none', type: 'array' });
+            if (Array.isArray(r) && r.length && /^[a-z]/i.test(r[0])) return true;
+        }
+    } catch (e) {}
+    return false;
+}
+
+function fullPinyin(name) {
+    if (pinyinCache.has(name)) return pinyinCache.get(name);
+    let v = String(name).toLowerCase();
+    if (pinyinReady) {
+        try {
+            const arr = window.pinyinPro.pinyin(name, { toneType: 'none', type: 'array' });
+            if (Array.isArray(arr) && arr.length) v = arr.join('').toLowerCase();
+        } catch (e) {}
+    }
+    pinyinCache.set(name, v);
+    return v;
+}
+
+function sortPending(tab) {
+    const pending = tab.students.filter(s => !tab.passed[s.id]);
+    if (!pinyinReady) return pending;
+    return pending.slice().sort((a, b) => {
+        const pa = fullPinyin(a.name);
+        const pb = fullPinyin(b.name);
+        if (pa !== pb) return pa < pb ? -1 : 1;
+        return a.id - b.id;
+    });
+}
+
+/* ==========================================================================
+   6. 点击特效合集（共 14 种）
+   ========================================================================== */
+const fxLayer = document.createElement('div');
+fxLayer.id = 'fxLayer';
+document.body.appendChild(fxLayer);
+
+// 1. 星星四散
+function fxStars(x, y) {
+    const n = 9;
+    for (let i = 0; i < n; i++) {
+        const el = document.createElement('div');
+        el.className = 'fx-item';
+        el.textContent = i % 2 ? '⭐' : '✨';
+        el.style.left = x + 'px'; el.style.top  = y + 'px';
+        el.style.fontSize = (14 + Math.random() * 14) + 'px';
+        fxLayer.appendChild(el);
+        const ang = (Math.PI * 2 / n) * i + Math.random() * 0.6;
+        const dist = 55 + Math.random() * 55;
+        el.animate([
+            { transform: 'translate(-50%,-50%) scale(0) rotate(0deg)', opacity: 1 },
+            { transform: `translate(calc(-50% + ${Math.cos(ang)*dist}px), calc(-50% + ${Math.sin(ang)*dist}px)) scale(1.25) rotate(${Math.random()*360}deg)`, opacity: 0 }
+        ], { duration: 620 + Math.random() * 240, easing: 'cubic-bezier(.2,.8,.3,1)' }).onfinish = () => el.remove();
+    }
+}
+
+// 2. 爱心上飘
+function fxHearts(x, y) {
+    for (let i = 0; i < 6; i++) {
+        const el = document.createElement('div');
+        el.className = 'fx-item';
+        el.textContent = i % 2 ? '💖' : '💕';
+        el.style.left = (x + (Math.random() - .5) * 70) + 'px';
+        el.style.top  = y + 'px';
+        el.style.fontSize = (14 + Math.random() * 12) + 'px';
+        fxLayer.appendChild(el);
+        el.animate([
+            { transform: 'translate(-50%,-50%) scale(0.3)', opacity: 0 },
+            { transform: 'translate(-50%,-50%) scale(1)', opacity: 1, offset: .22 },
+            { transform: `translate(calc(-50% + ${(Math.random()-.5)*46}px), calc(-50% - ${85 + Math.random()*65}px)) scale(0.75)`, opacity: 0 }
+        ], { duration: 880 + Math.random() * 300, easing: 'ease-out', delay: i * 45 }).onfinish = () => el.remove();
+    }
+}
+
+// 3. 彩纸屑
+function fxConfetti(x, y) {
+    const colors = ['#FF8FA3','#FFB86B','#FFD93D','#7ED9A0','#6EC6FF','#B39DDB'];
+    for (let i = 0; i < 18; i++) {
+        const el = document.createElement('div');
+        el.className = 'fx-item';
+        el.style.left = x + 'px'; el.style.top  = y + 'px';
+        el.style.width  = (6 + Math.random() * 8) + 'px';
+        el.style.height = (8 + Math.random() * 8) + 'px';
+        el.style.background = colors[i % colors.length];
+        el.style.borderRadius = Math.random() > .5 ? '3px' : '50%';
+        fxLayer.appendChild(el);
+        const ang = Math.random() * Math.PI * 2;
+        const dist = 60 + Math.random() * 95;
+        el.animate([
+            { transform: 'translate(-50%,-50%) rotate(0deg)', opacity: 1 },
+            { transform: `translate(calc(-50% + ${Math.cos(ang)*dist}px), calc(-50% + ${Math.sin(ang)*dist + 45}px)) rotate(${Math.random()*720}deg)`, opacity: 0 }
+        ], { duration: 850 + Math.random() * 400, easing: 'cubic-bezier(.15,.7,.3,1)' }).onfinish = () => el.remove();
+    }
+}
+
+// 4. 圆环涟漪
+function fxRipple(x, y) {
+    const colors = ['#FF8FA3', '#FFB86B', '#7ED9A0'];
+    for (let i = 0; i < 3; i++) {
+        const el = document.createElement('div');
+        el.className = 'fx-item';
+        el.style.left = x + 'px'; el.style.top  = y + 'px';
+        el.style.width  = '24px'; el.style.height = '24px';
+        el.style.borderRadius = '50%';
+        el.style.border = '4px solid ' + colors[i];
+        fxLayer.appendChild(el);
+        el.animate([
+            { transform: 'translate(-50%,-50%) scale(0.4)', opacity: .9 },
+            { transform: 'translate(-50%,-50%) scale(6)', opacity: 0 }
+        ], { duration: 700, easing: 'ease-out', delay: i * 110 }).onfinish = () => el.remove();
+    }
+}
+
+// 5. 闪光点
+function fxSparkles(x, y) {
+    for (let i = 0; i < 11; i++) {
+        const el = document.createElement('div');
+        el.className = 'fx-item';
+        el.textContent = '✨';
+        el.style.left = (x + (Math.random() - .5) * 105) + 'px';
+        el.style.top  = (y + (Math.random() - .5) * 105) + 'px';
+        el.style.fontSize = (12 + Math.random() * 14) + 'px';
+        fxLayer.appendChild(el);
+        el.animate([
+            { transform: 'translate(-50%,-50%) scale(0) rotate(0deg)', opacity: 1 },
+            { transform: 'translate(-50%,-50%) scale(1.2) rotate(200deg)', opacity: 0 }
+        ], { duration: 480 + Math.random() * 320, easing: 'ease-out', delay: Math.random() * 110 }).onfinish = () => el.remove();
+    }
+}
+
+// 6. 卡片弹跳
+function fxBounce(x, y, cardEl) {
+    if (!cardEl) return;
+    cardEl.animate([
+        { transform: 'scale(1) rotate(0deg)' },
+        { transform: 'scale(1.18) rotate(-4deg)', offset: .35 },
+        { transform: 'scale(0.92) rotate(3deg)',  offset: .7 },
+        { transform: 'scale(1) rotate(0deg)' }
+    ], { duration: 430, easing: 'ease-out' });
+}
+
+// 7. 彩虹光环
+function fxRainbow(x, y) {
+    for (let i = 0; i < 2; i++) {
+        const el = document.createElement('div');
+        el.className = 'fx-item';
+        el.style.left = x + 'px'; el.style.top  = y + 'px';
+        el.style.width  = '34px'; el.style.height = '34px';
+        el.style.borderRadius = '50%';
+        el.style.background = 'conic-gradient(#FF8FA3,#FFB86B,#FFD93D,#7ED9A0,#6EC6FF,#B39DDB,#FF8FA3)';
+        el.style.opacity = '.85';
+        fxLayer.appendChild(el);
+        el.animate([
+            { transform: 'translate(-50%,-50%) scale(0.25) rotate(0deg)', opacity: .9 },
+            { transform: 'translate(-50%,-50%) scale(4.5) rotate(200deg)', opacity: 0 }
+        ], { duration: 800, easing: 'ease-out', delay: i * 150 }).onfinish = () => el.remove();
+    }
+}
+
+// 8. 大表情弹出
+function fxEmojiPop(x, y) {
+    const emojis = ['😍', '🎉', '👍', '✨', '🌟', '🥳', '💯'];
+    const el = document.createElement('div');
+    el.className = 'fx-item';
+    el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    el.style.left = x + 'px'; el.style.top  = y + 'px';
+    el.style.fontSize = '42px';
+    fxLayer.appendChild(el);
+    el.animate([
+        { transform: 'translate(-50%,-50%) scale(0) rotate(-35deg)', opacity: 0 },
+        { transform: 'translate(-50%,-50%) scale(1.5) rotate(6deg)', opacity: 1, offset: .35 },
+        { transform: 'translate(-50%,-50%) scale(1) rotate(0deg)',   opacity: 1, offset: .68 },
+        { transform: 'translate(-50%,-50%) scale(0.55) rotate(22deg)', opacity: 0 }
+    ], { duration: 900, easing: 'ease-out' }).onfinish = () => el.remove();
+}
+
+// 9. 烟花
+function fxFirework(x, y) {
+    for(let i=0; i<25; i++) {
+        const el = document.createElement('div');
+        el.className = 'fx-item';
+        el.style.left = x + 'px'; el.style.top = y + 'px';
+        el.style.width = '6px'; el.style.height = '6px';
+        el.style.background = `hsl(${Math.random()*360}, 100%, 60%)`;
+        el.style.borderRadius = '50%';
+        el.style.boxShadow = '0 0 8px currentColor';
+        fxLayer.appendChild(el);
+        const ang = Math.random() * Math.PI * 2;
+        const dist = 60 + Math.random() * 100;
+        el.animate([
+            { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
+            { transform: `translate(calc(-50% + ${Math.cos(ang)*dist}px), calc(-50% + ${Math.sin(ang)*dist}px)) scale(0)`, opacity: 0 }
+        ], { duration: 700 + Math.random()*300, easing: 'ease-out' }).onfinish = () => el.remove();
+    }
+}
+
+// 10. 天降表情
+function fxEmojiRain(x, y) {
+    const emojis = ['🎈','🍬','🌈','🌟','🎁','🍭'];
+    for(let i=0; i<12; i++) {
+        const el = document.createElement('div');
+        el.className = 'fx-item';
+        el.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+        el.style.left = (x + (Math.random()-0.5)*200) + 'px';
+        el.style.top = '-40px';
+        el.style.fontSize = (20 + Math.random()*20) + 'px';
+        fxLayer.appendChild(el);
+        el.animate([
+            { transform: 'translateY(0) rotate(0deg)', opacity: 1 },
+            { transform: `translateY(${window.innerHeight + 80}px) rotate(${Math.random()*360}deg)`, opacity: 0.8 }
+        ], { duration: 1200 + Math.random()*800, easing: 'linear', delay: Math.random()*300 }).onfinish = () => el.remove();
+    }
+}
+
+// 11. 夸奖文字
+function fxTextPop(x, y) {
+    const words = ['太棒了', '真厉害', '666', '满分', '优秀', '漂亮'];
+    const el = document.createElement('div');
+    el.className = 'fx-item';
+    el.textContent = words[Math.floor(Math.random()*words.length)];
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+    el.style.fontSize = '32px'; el.style.fontWeight = '900';
+    el.style.color = '#FF8FA3';
+    el.style.textShadow = '2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff';
+    fxLayer.appendChild(el);
+    el.animate([
+        { transform: 'translate(-50%,-50%) scale(0.2)', opacity: 0 },
+        { transform: 'translate(-50%,-50%) scale(1.2)', opacity: 1, offset: .4 },
+        { transform: 'translate(-50%,-50%) scale(1)', opacity: 1, offset: .6 },
+        { transform: 'translate(-50%, -150%) scale(0.9)', opacity: 0 }
+    ], { duration: 1000, easing: 'ease-out' }).onfinish = () => el.remove();
+}
+
+// 12. 泡泡上升
+function fxBubble(x, y) {
+    for(let i=0; i<8; i++) {
+        const el = document.createElement('div');
+        el.className = 'fx-item';
+        el.style.left = (x + (Math.random()-0.5)*100) + 'px';
+        el.style.top = y + 'px';
+        const size = 10 + Math.random()*25;
+        el.style.width = size + 'px'; el.style.height = size + 'px';
+        el.style.borderRadius = '50%';
+        el.style.border = '2px solid rgba(110,198,255,0.8)';
+        el.style.background = 'rgba(255,255,255,0.4)';
+        fxLayer.appendChild(el);
+        el.animate([
+            { transform: 'translate(-50%,-50%) scale(0.5)', opacity: 1 },
+            { transform: `translate(calc(-50% + ${(Math.random()-0.5)*50}px), calc(-50% - ${100+Math.random()*100}px)) scale(1.2)`, opacity: 0 }
+        ], { duration: 1000 + Math.random()*500, easing: 'ease-out', delay: i*60 }).onfinish = () => el.remove();
+    }
+}
+
+// 13. 闪电
+function fxLightning(x, y) {
+    const el = document.createElement('div');
+    el.className = 'fx-item';
+    el.textContent = '⚡';
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+    el.style.fontSize = '50px';
+    fxLayer.appendChild(el);
+    el.animate([
+        { transform: 'translate(-50%,-50%) scale(0) rotate(-20deg)', opacity: 0 },
+        { transform: 'translate(-50%,-50%) scale(1.5) rotate(10deg)', opacity: 1, offset: .3 },
+        { transform: 'translate(-50%,-50%) scale(1) rotate(-5deg)', opacity: 1, offset: .6 },
+        { transform: 'translate(-50%,-50%) scale(0.5) rotate(0deg)', opacity: 0 }
+    ], { duration: 600, easing: 'ease-in-out' }).onfinish = () => el.remove();
+}
+
+// 14. 螺旋飞出
+function fxSpiral(x, y) {
+    for(let i=0; i<6; i++) {
+        const el = document.createElement('div');
+        el.className = 'fx-item';
+        el.textContent = '⭐';
+        el.style.left = x + 'px'; el.style.top = y + 'px';
+        el.style.fontSize = '24px';
+        fxLayer.appendChild(el);
+        const ang = i * (Math.PI * 2 / 6);
+        el.animate([
+            { transform: `translate(-50%,-50%) scale(0.5) rotate(0deg)`, opacity: 1 },
+            { transform: `translate(calc(-50% + ${Math.cos(ang)*80}px), calc(-50% + ${Math.sin(ang)*80}px)) scale(1.2) rotate(180deg)`, opacity: 0.8, offset: 0.5 },
+            { transform: `translate(calc(-50% + ${Math.cos(ang+2)*150}px), calc(-50% + ${Math.sin(ang+2)*150}px)) scale(0) rotate(360deg)`, opacity: 0 }
+        ], { duration: 800, easing: 'ease-out' }).onfinish = () => el.remove();
+    }
+}
+
+// 特效池（共14个）
+const FX_FNS = [
+    fxStars, fxHearts, fxConfetti, fxRipple, 
+    fxSparkles, fxBounce, fxRainbow, fxEmojiPop,
+    fxFirework, fxEmojiRain, fxTextPop, fxBubble,
+    fxLightning, fxSpiral
+];
+
+function spawnEffect(x, y, cardEl) {
+    try {
+        const fn = FX_FNS[Math.floor(Math.random() * FX_FNS.length)];
+        fn(x, y, cardEl);
+    } catch (e) {}
+}
+
+/* ==========================================================================
+   7. 麦克风音浪控制
+   ========================================================================== */
+let micStream = null;
+let audioAnalyser = null;
+let micDataArray = null;
+let micRaf = null;
+
+function toggleMic() {
+    const btn = $('#micBtn');
+    if (micStream) {
+        micStream.getTracks().forEach(t => t.stop());
+        micStream = null;
+        if (micRaf) cancelAnimationFrame(micRaf);
+        btn.textContent = '🎤 开启音浪';
+        btn.classList.remove('active');
+        document.querySelectorAll('.wave-bar').forEach(b => b.style.height = '10%');
+        return;
+    }
+    
+    if (location.protocol === 'file:') {
+        toast('本地文件无法使用麦克风，请部署到网上(HTTPS)后使用');
+        return;
+    }
+
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        micStream = stream;
+        const ctx = getAudioCtx();
+        const source = ctx.createMediaStreamSource(stream);
+        audioAnalyser = ctx.createAnalyser();
+        audioAnalyser.fftSize = 256;
+        source.connect(audioAnalyser);
+        micDataArray = new Uint8Array(audioAnalyser.frequencyBinCount);
+        
+        btn.textContent = '⏹ 关闭音浪';
+        btn.classList.add('active');
+        
+        updateWave();
+    }).catch(err => {
+        console.error(err);
+        toast('无法访问麦克风：' + (err.message || '请检查权限'));
+    });
+}
+
+function updateWave() {
+    if (!audioAnalyser) return;
+    audioAnalyser.getByteFrequencyData(micDataArray);
+    let sum = 0;
+    // 取人声主要频段
+    for (let i = 0; i < 30; i++) {
+        sum += micDataArray[i];
+    }
+    let vol = sum / 30; // 0 ~ 255
+    
+    const bars = document.querySelectorAll('.wave-bar');
+    bars.forEach((bar, i) => {
+        let h = 10 + (vol / 255) * 90 * (0.6 + Math.random()*0.6);
+        if (h > 100) h = 100;
+        bar.style.height = h + '%';
+    });
+    
+    micRaf = requestAnimationFrame(updateWave);
+}
+
+/* ==========================================================================
+   8. 渲染
+   ========================================================================== */
+function renderTabs() {
+    const frag = document.createDocumentFragment();
+    Object.values(state.tabs).forEach(t => {
+        const btn = document.createElement('button');
+        btn.className = 'tab' + (state.activeTab === t.id ? ' active' : '');
+        btn.type = 'button';
+        btn.textContent = t.name;
+        btn.addEventListener('click', () => switchTab(t.id));
+        frag.appendChild(btn);
+    });
+    elTabs.innerHTML = '';
+    elTabs.appendChild(frag);
+}
+
+function renderProgress() {
+    const tab = currentTab();
+    const total = tab.students.length;
+    const done = tab.students.filter(s => tab.passed[s.id]).length;
+
+    elProgText.innerHTML = '已交 <span class="num">' + done + '</span> / ' + total;
+    elProgFill.style.width = (total === 0 ? 0 : (done / total) * 100) + '%';
+}
+
+function makeAvatarEl(student) {
+    const box = document.createElement('div');
+    box.className = 'avatar';
+
+    if (student.avatarType === 'image' && student.avatarData) {
+        const img = document.createElement('img');
+        img.src = student.avatarData;
+        img.alt = '';
+        img.onerror = function () {
+            this.remove();
+            box.textContent = student.name.charAt(0);
+            box.classList.add('txt');
+            box.style.background = candyOf(student.id);
+        };
+        box.appendChild(img);
+        return box;
+    }
+
+    if (student.avatarType === 'emoji' && student.avatarData) {
+        box.style.background = candyOf(student.id);
+        box.style.fontSize = '22px';
+        box.textContent = student.avatarData;
+        return box;
+    }
+
+    box.classList.add('txt');
+    box.style.background = candyOf(student.id);
+    box.textContent = student.name.charAt(0);
+    return box;
+}
+
+function makeCard(student, isPassed) {
+    const btn = document.createElement('button');
+    btn.className = 'card';
+    btn.type = 'button';
+    btn.dataset.id = student.id;
+    btn.style.setProperty('--stripe', candyOf(student.id));
+
+    btn.appendChild(makeAvatarEl(student));
+
+    const nm = document.createElement('span');
+    nm.className = 'cname' + (student.name.length >= 5 ? ' long' : '');
+    nm.textContent = student.name;
+    btn.appendChild(nm);
+
+    btn.addEventListener('click', () => {
+        if (editMode) openAvatarModal(student.id);
+        else if (isPassed) setPassed(student.id, false);
+        else setPassed(student.id, true);
+    });
+
+    return btn;
+}
+
+function renderPending() {
+    const tab = currentTab();
+    const list = sortPending(tab);
+
+    elPendingGrid.innerHTML = '';
+    elPendingCnt.textContent = list.length;
+
+    if (list.length === 0) {
+        const tip = document.createElement('div');
+        tip.className = 'empty-tip';
+        if (tab.students.length === 0) {
+            tip.innerHTML = '<span class="big">📝</span>名单还是空的<br>去「⋯ → 名单管理」添加学生吧';
+        } else {
+            tip.innerHTML = '<span class="big">🎉</span>全部交齐啦！';
+        }
+        elPendingGrid.appendChild(tip);
+        return;
+    }
+
+    const frag = document.createDocumentFragment();
+    list.forEach(s => frag.appendChild(makeCard(s, false)));
+    elPendingGrid.appendChild(frag);
+}
+
+function renderPassed() {
+    const tab = currentTab();
+    const list = tab.students
+        .filter(s => tab.passed[s.id])
+        .sort((a, b) => (tab.passed[a.id].seq || 0) - (tab.passed[b.id].seq || 0));
+
+    elPassedGrid.innerHTML = '';
+    elPassedCnt.textContent = list.length;
+
+    if (list.length === 0) {
+        const tip = document.createElement('div');
+        tip.className = 'empty-tip';
+        tip.innerHTML = '<span class="big">🍬</span>还没有人交呢';
+        elPassedGrid.appendChild(tip);
+        return;
+    }
+
+    const frag = document.createDocumentFragment();
+    list.forEach(s => frag.appendChild(makeCard(s, true)));
+    elPassedGrid.appendChild(frag);
+}
+
+function render() {
+    renderTabs();
+    renderProgress();
+    renderPending();
+    renderPassed();
+}
+
+/* ==========================================================================
+   9. 打卡核心 + FLIP
+   ========================================================================== */
+function pushUndo(tab) {
+    undoStack.push({
+        tabId: tab.id,
+        passed: JSON.parse(JSON.stringify(tab.passed)),
+        seq: tab.seq
+    });
+    if (undoStack.length > 60) undoStack.shift();
+}
+
+function setPassed(id, passed) {
+    const tab = currentTab();
+    const fromEl = passed
+        ? elPendingGrid.querySelector('.card[data-id="' + id + '"]')
+        : elPassedGrid.querySelector('.card[data-id="' + id + '"]');
+    const fromRect = fromEl ? fromEl.getBoundingClientRect() : null;
+    const cx = fromRect ? fromRect.left + fromRect.width / 2 : window.innerWidth / 2;
+    const cy = fromRect ? fromRect.top + fromRect.height / 2 : window.innerHeight / 2;
+
+    pushUndo(tab);
+
+    if (passed) {
+        if (!tab.passed[id]) {
+            tab.seq += 1;
+            tab.passed[id] = { time: Date.now(), seq: tab.seq };
+        }
+    } else {
+        delete tab.passed[id];
+    }
+
+    const allDone = tab.students.length > 0 && tab.students.every(s => tab.passed[s.id]);
+    save();
+
+    renderProgress();
+    renderPending();
+    renderPassed();
+
+    const toEl = passed
+        ? elPassedGrid.querySelector('.card[data-id="' + id + '"]')
+        : elPendingGrid.querySelector('.card[data-id="' + id + '"]');
+
+    if (fromRect && toEl && !reduceMotion()) {
+        const toRect = toEl.getBoundingClientRect();
+        if (toRect.width && toRect.height) {
+            const dx = fromRect.left - toRect.left;
+            const dy = fromRect.top  - toRect.top;
+            const sx = fromRect.width  / toRect.width;
+            const sy = fromRect.height / toRect.height;
+            try {
+                toEl.animate([
+                    { transform: `translate(${dx}px,${dy}px) scale(${sx},${sy})`, opacity: .92 },
+                    { transform: 'translate(0,0) scale(1,1)', opacity: 1 }
+                ], { duration: 460, easing: 'cubic-bezier(.22,.9,.3,1)' });
+            } catch (e) {}
+        }
+    }
+
+    if (passed) {
+        spawnEffect(cx, cy, fromEl);
+        playDing();
+        if (allDone) setTimeout(playFanfare, 380);
+    } else {
+        fxRipple(cx, cy);
+    }
+}
+
+function switchTab(tabId) {
+    if (state.activeTab === tabId) return;
+    if (!state.tabs[tabId]) return;
+    state.activeTab = tabId;
+    save();
+    render();
+}
+
+function undo() {
+    const last = undoStack.pop();
+    if (!last) { toast('没有可以撤销的操作了'); return; }
+    const tab = state.tabs[last.tabId];
+    if (!tab) return;
+    if (state.activeTab !== last.tabId) state.activeTab = last.tabId;
+    tab.passed = last.passed;
+    tab.seq = last.seq;
+    save();
+    render();
+    toast('已撤销');
+}
+
+/* ==========================================================================
+   10. 音效
+   ========================================================================== */
+function getAudioCtx() {
+    if (audioCtx) {
+        if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+        return audioCtx;
+    }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    try { audioCtx = new AC(); } catch (e) { return null; }
+    return audioCtx;
+}
+
+function playDing() {
+    if (!state.soundOn) return;
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.type = 'sine'; osc.frequency.setValueAtTime(880, t);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.30, t + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.30);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.33);
+}
+
+function playFanfare() {
+    if (!state.soundOn) return;
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const notes = [523.25, 659.25, 783.99];
+    const t0 = ctx.currentTime;
+    notes.forEach((freq, i) => {
+        const t = t0 + i * 0.14;
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.type = 'sine'; osc.frequency.setValueAtTime(freq, t);
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.24, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.42);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(t); osc.stop(t + 0.45);
+    });
+}
+
+function renderSoundBtn() {
+    if (state.soundOn) { elSoundBtn.textContent = '🔊'; elSoundBtn.classList.remove('off'); }
+    else { elSoundBtn.textContent = '🔇'; elSoundBtn.classList.add('off'); }
+}
+
+/* ==========================================================================
+   11. 自定义 Tab 管理
+   ========================================================================== */
+function openAddTab() {
+    $('#newTabName').value = '';
+    openModal('addTabModal');
+    setTimeout(() => $('#newTabName').focus(), 150);
+}
+
+function confirmAddTab() {
+    const name = ($('#newTabName').value || '').trim();
+    if (!name) { toast('请输入任务名称'); return; }
+
+    let newId = 'custom_' + Date.now();
+    const sourceTab = state.tabs[DEFAULT_TABS[0].id];
+    const sourceStudents = sourceTab ? JSON.parse(JSON.stringify(sourceTab.students)) : [];
+
+    state.tabs[newId] = {
+        id: newId, name: name, students: sourceStudents,
+        passed: {}, seq: 0
+    };
+    state.activeTab = newId;
+    save();
+    closeModal('addTabModal');
+    render();
+    toast('新任务已创建');
+}
+
+/* ==========================================================================
+   12. 名单管理
+   ========================================================================== */
+function openRoster() {
+    const tab = currentTab();
+    $('#rosterTabName').textContent = tab.name;
+    renderRosterList();
+    openModal('rosterModal');
+}
+
+function renderRosterList() {
+    const tab = currentTab();
+    const box = $('#rosterList');
+    box.innerHTML = '';
+
+    if (tab.students.length === 0) {
+        const hint = document.createElement('div');
+        hint.className = 'empty-hint';
+        hint.textContent = '还没有学生，点下方按钮添加';
+        box.appendChild(hint);
+        return;
+    }
+
+    const frag = document.createDocumentFragment();
+    tab.students.forEach(s => {
+        const row = document.createElement('div');
+        row.className = 'roster-row';
+        row.dataset.id = s.id;
+
+        const sid = document.createElement('input');
+        sid.type = 'text'; sid.className = 'ri-sid'; sid.value = s.sid || '';
+        sid.placeholder = '学号'; sid.maxLength = 6;
+
+        const name = document.createElement('input');
+        name.type = 'text'; name.className = 'ri-name'; name.value = s.name;
+        name.placeholder = '姓名'; name.maxLength = 12;
+
+        const del = document.createElement('button');
+        del.className = 'del'; del.type = 'button'; del.textContent = '×';
+        del.addEventListener('click', () => { row.remove(); updateRosterNumbers(); });
+
+        row.appendChild(sid); row.appendChild(name); row.appendChild(del);
+        frag.appendChild(row);
+    });
+    box.appendChild(frag);
+}
+
+function addStudentRow() {
+    const box = $('#rosterList');
+    const hint = box.querySelector('.empty-hint');
+    if (hint) hint.remove();
+
+    const count = box.querySelectorAll('.roster-row').length + 1;
+    const row = document.createElement('div');
+    row.className = 'roster-row';
+
+    const sid = document.createElement('input');
+    sid.type = 'text'; sid.className = 'ri-sid'; sid.value = String(count).padStart(2, '0');
+    sid.placeholder = '学号'; sid.maxLength = 6;
+
+    const name = document.createElement('input');
+    name.type = 'text'; name.className = 'ri-name';
+    name.placeholder = '姓名'; name.maxLength = 12;
+
+    const del = document.createElement('button');
+    del.className = 'del'; del.type = 'button'; del.textContent = '×';
+    del.addEventListener('click', () => { row.remove(); updateRosterNumbers(); });
+
+    row.appendChild(sid); row.appendChild(name); row.appendChild(del);
+    box.appendChild(row);
+    name.focus();
+}
+
+function updateRosterNumbers() {
+    $$('#rosterList .roster-row').forEach((row, i) => {
+        const sid = row.querySelector('.ri-sid');
+        if (sid && !sid.value.trim()) sid.value = String(i + 1).padStart(2, '0');
+    });
+}
+
+function saveRoster() {
+    const tab = currentTab();
+    const rows = $$('#rosterList .roster-row');
+    if (rows.length === 0 && !confirm('名单将变为空，确定吗？')) return;
+
+    const oldById = new Map(tab.students.map(s => [s.id, s]));
+    const newStudents = [];
+    const usedNames = new Set();
+    let maxId = 0;
+    tab.students.forEach(s => { if (s.id > maxId) maxId = s.id; });
+
+    rows.forEach((row, i) => {
+        const nameInput = row.querySelector('.ri-name');
+        const sidInput  = row.querySelector('.ri-sid');
+        const name = (nameInput.value || '').trim();
+        if (!name) return;
+
+        let finalName = name, n = 2;
+        while (usedNames.has(finalName)) { finalName = name + '(' + n + ')'; n++; }
+        usedNames.add(finalName);
+
+        const rawId = row.dataset.id;
+        let student;
+
+        if (rawId && oldById.has(Number(rawId))) {
+            student = Object.assign({}, oldById.get(Number(rawId)));
+            student.name = finalName;
+        } else {
+            maxId += 1;
+            student = { id: maxId, name: finalName, sid: '', avatarType: 'text', avatarData: '' };
+        }
+        student.id = Number(student.id);
+        student.sid = (sidInput.value || '').trim() || String(i + 1).padStart(2, '0');
+        newStudents.push(student);
+    });
+
+    const keepIds = new Set(newStudents.map(s => s.id));
+    Object.keys(tab.passed).forEach(k => { if (!keepIds.has(Number(k))) delete tab.passed[k]; });
+
+    tab.students = newStudents;
+    save(); render(); closeModal('rosterModal'); toast('名单已保存');
+}
+
+function bulkImport() {
+    const text = $('#bulkInput').value;
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l !== '');
+    if (lines.length === 0) { toast('请先粘贴名单'); return; }
+    if (lines.length > 100) { toast('一次最多导入 100 人'); return; }
+
+    const box = $('#rosterList');
+    box.innerHTML = '';
+    const frag = document.createDocumentFragment();
+
+    lines.forEach((line, i) => {
+        let sid = '', name = line;
+        const m = line.match(/^(\d{1,4})\s*[\.、,，:：\s]\s*(.+)$/);
+        if (m) { sid = m[1]; name = m[2].trim(); }
+
+        const row = document.createElement('div');
+        row.className = 'roster-row';
+
+        const sidInput = document.createElement('input');
+        sidInput.type = 'text'; sidInput.className = 'ri-sid';
+        sidInput.value = sid || String(i + 1).padStart(2, '0');
+        sidInput.maxLength = 6;
+
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text'; nameInput.className = 'ri-name';
+        nameInput.value = name; nameInput.maxLength = 12;
+
+        const del = document.createElement('button');
+        del.className = 'del'; del.type = 'button'; del.textContent = '×';
+        del.addEventListener('click', () => { row.remove(); updateRosterNumbers(); });
+
+        row.appendChild(sidInput); row.appendChild(nameInput); row.appendChild(del);
+        frag.appendChild(row);
+    });
+
+    box.appendChild(frag);
+    $('#bulkInput').value = '';
+    toast('已导入 ' + lines.length + ' 人，记得点保存');
+}
+
+/* ==========================================================================
+   13. 换头像
+   ========================================================================== */
+function toggleEditMode(force) {
+    editMode = (typeof force === 'boolean') ? force : !editMode;
+    document.body.classList.toggle('edit-mode', editMode);
+    toast(editMode ? '换头像模式：点任意卡片即可更换' : '已退出换头像模式');
+}
+
+function openAvatarModal(id) {
+    const tab = currentTab();
+    const student = tab.students.find(s => s.id === id);
+    if (!student) return;
+
+    editingStudentId = id;
+    $('#avatarTitle').textContent = '为 ' + student.name + ' 更换头像';
+
+    const grid = $('#emojiGrid');
+    grid.innerHTML = '';
+    const frag = document.createDocumentFragment();
+
+    EMOJIS.forEach(emoji => {
+        const item = document.createElement('button');
+        item.className = 'emoji-item' + (student.avatarType === 'emoji' && student.avatarData === emoji ? ' selected' : '');
+        item.type = 'button'; item.textContent = emoji;
+        item.addEventListener('click', () => {
+            student.avatarType = 'emoji'; student.avatarData = emoji;
+            save(); render(); closeModal('avatarModal');
+        });
+        frag.appendChild(item);
+    });
+    grid.appendChild(frag);
+    openModal('avatarModal');
+}
+
+function handleAvatarFile(event) {
+    const input = event.target;
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file) return;
+    if (!file.type || file.type.indexOf('image/') !== 0) { toast('请选择图片文件'); return; }
+
+    const tab = currentTab();
+    const student = tab.students.find(s => s.id === editingStudentId);
+    if (!student) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const img = new Image();
+        img.onload = function () {
+            try {
+                const MAX = 128;
+                const w = img.naturalWidth || img.width;
+                const h = img.naturalHeight || img.height;
+                const side = Math.min(w, h);
+                const sx = (w - side) / 2, sy = (h - side) / 2;
+
+                const canvas = document.createElement('canvas');
+                canvas.width = MAX; canvas.height = MAX;
+                canvas.getContext('2d').drawImage(img, sx, sy, side, side, 0, 0, MAX, MAX);
+
+                student.avatarType = 'image';
+                student.avatarData = canvas.toDataURL('image/jpeg', 0.78);
+
+                save(); render(); closeModal('avatarModal'); toast('头像已更新');
+            } catch (err) { toast('图片处理失败'); }
+        };
+        img.onerror = function () { toast('图片读取失败'); };
+        img.src = e.target.result;
+    };
+    reader.onerror = function () { toast('文件读取失败'); };
+    reader.readAsDataURL(file);
+}
+
+function resetAvatar() {
+    const tab = currentTab();
+    const student = tab.students.find(s => s.id === editingStudentId);
+    if (!student) return;
+    student.avatarType = 'text'; student.avatarData = '';
+    save(); render(); closeModal('avatarModal'); toast('已恢复默认头像');
+}
+
+/* ==========================================================================
+   14. 记录 / 历史（支持删除） / CSV
+   ========================================================================== */
+function buildRecordHTML(tab, date, isHistory, records) {
+    let passed, pending;
+
+    if (isHistory) {
+        passed = records.filter(r => r.passed);
+        pending = records.filter(r => !r.passed);
+    } else {
+        passed = tab.students.filter(s => tab.passed[s.id]);
+        pending = tab.students.filter(s => !tab.passed[s.id]);
+    }
+
+    let html = '';
+    html += '<div class="report-title">' + esc(isHistory ? '' : tab.name) + ' 打卡记录</div>';
+    html += '<div class="report-meta">';
+    html += '📅 日期：<b>' + esc(date) + '</b><br>';
+    html += '📊 已交 <b>' + passed.length + '</b> 人 / 未交 <b>' + pending.length +
+            '</b> 人 / 共 <b>' + (passed.length + pending.length) + '</b> 人';
+    html += '</div>';
+
+    html += '<div class="report-sec ok"><h4>✅ 已完成（' + passed.length + '）</h4><div class="tags">';
+    if (passed.length === 0) {
+        html += '<span class="tag">无</span>';
+    } else {
+        passed.sort((a, b) => {
+            const ta = isHistory ? a.time : tab.passed[a.id]?.time;
+            const tb = isHistory ? b.time : tab.passed[b.id]?.time;
+            return (ta || 0) - (tb || 0);
+        }).forEach(s => {
+            const t = isHistory ? s.time : tab.passed[s.id].time;
+            const timeStr = t ? new Date(t).toTimeString().slice(0, 5) : '';
+            html += '<span class="tag">' + esc(s.name) + (timeStr ? ' · ' + timeStr : '') + '</span>';
+        });
+    }
+    html += '</div></div>';
+
+    html += '<div class="report-sec no"><h4>❌ 未完成（' + pending.length + '）</h4><div class="tags">';
+    if (pending.length === 0) {
+        html += '<span class="tag">无</span>';
+    } else {
+        pending.forEach(s => { html += '<span class="tag">' + esc(s.name) + '</span>'; });
+    }
+    html += '</div></div>';
+    return html;
+}
+
+function openRecord() {
+    const tab = currentTab();
+    $('#recordTitle').textContent = '今日记录';
+    $('#recordBody').innerHTML = buildRecordHTML(tab, state.date, false);
+    openModal('recordModal');
+}
+
+function openHistory() {
+    const box = $('#historyList');
+    box.innerHTML = '';
+
+    if (!state.history || state.history.length === 0) {
+        box.innerHTML = '<div class="empty-hint">还没有存档记录<br>点「存今天」保存一份吧</div>';
+        openModal('historyModal');
+        return;
+    }
+
+    const frag = document.createDocumentFragment();
+    state.history.forEach(h => {
+        const row = document.createElement('div');
+        row.className = 'his-row';
+
+        const dateEl = document.createElement('div');
+        dateEl.className = 'his-date';
+        dateEl.textContent = h.date || '';
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'his-name';
+        nameEl.textContent = h.project || '';
+        nameEl.title = h.project || '';
+
+        const numEl = document.createElement('div');
+        numEl.className = 'his-num';
+        numEl.textContent = (h.passed || 0) + '/' + (h.total || 0);
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'his-del';
+        delBtn.innerHTML = '×';
+        delBtn.style.cssText = 'width:44px;height:44px;border-radius:50%;background:#FDEDEA;color:#E5674E;font-size:22px;flex:none;display:flex;align-items:center;justify-content:center;margin-left:4px;';
+        delBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (confirm('确定删除这条存档吗？')) {
+                state.history = state.history.filter(item => item.id !== h.id);
+                save();
+                openHistory();
+            }
+        });
+
+        row.appendChild(dateEl); 
+        row.appendChild(nameEl); 
+        row.appendChild(numEl);
+        row.appendChild(delBtn);
+        
+        row.addEventListener('click', () => {
+            $('#recordTitle').textContent = h.project + ' (' + h.date + ')';
+            $('#recordBody').innerHTML = buildRecordHTML(null, h.date, true, h.records);
+            openModal('recordModal');
+        });
+
+        frag.appendChild(row);
+    });
+
+    box.appendChild(frag);
+    openModal('historyModal');
+}
+
+function openSaveToday() {
+    const tab = currentTab();
+    $('#projectName').value = tab.name;
+    $('#saveDate').value = state.date;
+    openModal('saveModal');
+    setTimeout(() => { $('#projectName').focus(); $('#projectName').select(); }, 150);
+}
+
+function confirmSaveToday() {
+    const tab = currentTab();
+    const project = ($('#projectName').value || '').trim() || tab.name;
+
+    const records = tab.students.map(s => ({
+        name: s.name,
+        sid: s.sid,
+        passed: !!tab.passed[s.id],
+        time: tab.passed[s.id] ? tab.passed[s.id].time : null
+    }));
+
+    state.history.unshift({
+        id: Date.now(), date: state.date, project: project,
+        total: tab.students.length,
+        passed: records.filter(r => r.passed).length,
+        records: records
+    });
+
+    if (state.history.length > 300) state.history.length = 300;
+    save(); closeModal('saveModal'); toast('已存入历史存档');
+}
+
+function csvCell(v) {
+    const s = String(v == null ? '' : v);
+    return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function exportCSV() {
+    const tab = currentTab();
+    const rows = [['日期', '姓名', '学号', '时间', '状态']];
+
+    tab.students.forEach(s => {
+        const p = tab.passed[s.id];
+        rows.push([
+            state.date, s.name, s.sid || '',
+            p && p.time ? new Date(p.time).toTimeString().slice(0, 8) : '',
+            p ? '已交' : '未交'
+        ]);
+    });
+
+    const csv = '\ufeff' + rows.map(r => r.map(csvCell).join(',')).join('\r\n');
+    try {
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = '打卡_' + tab.name + '_' + state.date + '.csv';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+        toast('CSV已导出（用Excel查看，恢复数据请用备份）');
+    } catch (e) { toast('导出失败'); }
+}
+
+/* ==========================================================================
+   15. 分享 / 二维码
+   ========================================================================== */
+function openQRCode() {
+    const box = $('#qrcodeBox');
+    box.innerHTML = '';
+    
+    if (location.protocol === 'file:') {
+        box.innerHTML = '<p style="color:#E5674E;font-size:15px;padding:20px;">当前是本地文件打开，无法生成扫码链接。<br>请把网页挂到网上（如GitHub Pages）后使用。</p>';
+        openModal('qrcodeModal');
+        return;
+    }
+
+    if (typeof QRCode === 'undefined') {
+        box.innerHTML = '<p style="color:#E5674E;font-size:15px;padding:20px;">二维码组件加载失败，请检查网络。</p>';
+        openModal('qrcodeModal');
+        return;
+    }
+
+    const taskName = currentTab().name;
+    const url = location.origin + location.pathname + '?task=' + encodeURIComponent(taskName);
+
+    new QRCode(box, {
+        text: url, width: 180, height: 180,
+        colorDark: "#5A4A42", colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+    });
+    openModal('qrcodeModal');
+}
+
+/* ==========================================================================
+   16. 备份恢复
+   ========================================================================== */
+function openBackup() { $('#backupArea').value = ''; openModal('backupModal'); }
+
+function copyBackup() {
+    const payload = JSON.stringify(state);
+    const ta = $('#backupArea');
+    ta.value = payload;
+    const done = () => toast('已复制，去粘贴到备忘录吧');
+    const fail = () => {
+        ta.focus(); ta.select(); ta.setSelectionRange(0, payload.length);
+        toast('请长按输入框手动复制');
+    };
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(payload).then(done).catch(fail);
+    } else {
+        try {
+            ta.focus(); ta.select(); ta.setSelectionRange(0, payload.length);
+            if (document.execCommand('copy')) done(); else fail();
+        } catch (e) { fail(); }
+    }
+}
+
+function restoreBackup() {
+    const raw = ($('#backupArea').value || '').trim();
+    if (!raw) { toast('请先把备份文字粘贴进来'); return; }
+    let parsed;
+    try { parsed = JSON.parse(raw); } catch (e) { alert('数据解析失败'); return; }
+    if (!parsed || !parsed.tabs) { alert('数据格式不正确'); return; }
+    if (!confirm('恢复后将覆盖当前所有数据，确定继续吗？')) return;
+
+    try {
+        const newState = {
+            version: DATA_VERSION,
+            activeTab: parsed.activeTab || Object.keys(parsed.tabs)[0],
+            soundOn: typeof parsed.soundOn === 'boolean' ? parsed.soundOn : true,
+            date: parsed.date || todayStr(),
+            tabs: {},
+            history: Array.isArray(parsed.history) ? parsed.history : []
+        };
+
+        Object.keys(parsed.tabs).forEach(k => {
+            const t = parsed.tabs[k];
+            newState.tabs[k] = {
+                id: k, name: t.name || '未命名',
+                students: Array.isArray(t.students) ? t.students.map((s, i) => ({
+                    id: Number(s.id) || (i + 1),
+                    name: String(s.name || '').trim() || ('学生' + (i + 1)),
+                    sid: String(s.sid || (i + 1)).padStart(2, '0'),
+                    avatarType: s.avatarType || 'text',
+                    avatarData: s.avatarData || ''
+                })) : [],
+                passed: t.passed || {},
+                seq: typeof t.seq === 'number' ? t.seq : 0
+            };
+        });
+
+        state = newState;
+        save(); renderSoundBtn(); render();
+        closeModal('backupModal'); toast('数据恢复成功');
+    } catch (e) { alert('恢复失败：' + e.message); }
+}
+
+/* ==========================================================================
+   17. 长按重置
+   ========================================================================== */
+let resetTimer = null;
+function startResetPress(e) {
+    if (e && e.cancelable) e.preventDefault();
+    const item = $('#resetItem');
+    const fill = item.querySelector('.reset-fill');
+    fill.style.transition = 'none'; fill.style.width = '0%';
+    void fill.offsetWidth;
+    fill.style.transition = '';
+    item.classList.add('pressing');
+    clearTimeout(resetTimer);
+    resetTimer = setTimeout(() => { doReset(); cancelResetPress(); }, 1500);
+}
+
+function cancelResetPress() {
+    clearTimeout(resetTimer); resetTimer = null;
+    const item = $('#resetItem');
+    const fill = item.querySelector('.reset-fill');
+    item.classList.remove('pressing');
+    fill.style.transition = 'none'; fill.style.width = '0%';
+    void fill.offsetWidth;
+    fill.style.transition = '';
+}
+
+function doReset() {
+    const tab = currentTab();
+    pushUndo(tab);
+    tab.passed = {}; tab.seq = 0;
+    save(); render(); toast('已重置「' + tab.name + '」');
+}
+
+/* ==========================================================================
+   18. 事件绑定
+   ========================================================================== */
+elSoundBtn.addEventListener('click', () => {
+    state.soundOn = !state.soundOn; save(); renderSoundBtn();
+    if (state.soundOn) playDing();
+});
+
+$('#micBtn').addEventListener('click', toggleMic);
+
+$('#undoBtn').addEventListener('click', undo);
+$('#saveTodayBtn').addEventListener('click', openSaveToday);
+$('#csvBtn').addEventListener('click', exportCSV);
+
+const elMenu = $('#menu');
+$('#moreBtn').addEventListener('click', (e) => { e.stopPropagation(); elMenu.classList.toggle('active'); });
+elMenu.addEventListener('click', (e) => { if (e.target === elMenu) elMenu.classList.remove('active'); });
+
+$$('.menu-item[data-action]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const action = btn.dataset.action;
+        elMenu.classList.remove('active');
+        if (action === 'roster') openRoster();
+        else if (action === 'avatar') toggleEditMode();
+        else if (action === 'record') openRecord();
+        else if (action === 'history') openHistory();
+        else if (action === 'backup') openBackup();
+        else if (action === 'qrcode') openQRCode();
+    });
+});
+
+const resetItem = $('#resetItem');
+resetItem.addEventListener('pointerdown', startResetPress);
+resetItem.addEventListener('pointerup', cancelResetPress);
+resetItem.addEventListener('pointerleave', cancelResetPress);
+resetItem.addEventListener('pointercancel', cancelResetPress);
+resetItem.addEventListener('contextmenu', e => e.preventDefault());
+
+$$('[data-close]').forEach(btn => {
+    btn.addEventListener('click', () => closeModal(btn.dataset.close));
+});
+$$('.modal').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); });
+});
+
+$('#addTabBtn').addEventListener('click', openAddTab);
+$('#confirmAddTabBtn').addEventListener('click', confirmAddTab);
+$('#newTabName').addEventListener('keydown', e => { if (e.key === 'Enter') confirmAddTab(); });
+
+$('#confirmSaveBtn').addEventListener('click', confirmSaveToday);
+$('#projectName').addEventListener('keydown', e => { if (e.key === 'Enter') confirmSaveToday(); });
+
+$('#addStudentBtn').addEventListener('click', addStudentRow);
+$('#saveRosterBtn').addEventListener('click', saveRoster);
+$('#bulkImportBtn').addEventListener('click', bulkImport);
+
+$('#avatarCamera').addEventListener('change', handleAvatarFile);
+$('#avatarFile').addEventListener('change', handleAvatarFile);
+$('#avatarResetBtn').addEventListener('click', resetAvatar);
+
+$('#copyBackupBtn').addEventListener('click', copyBackup);
+$('#restoreBackupBtn').addEventListener('click', restoreBackup);
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        $$('.modal.active').forEach(m => m.classList.remove('active'));
+        elMenu.classList.remove('active');
+        if (editMode) toggleEditMode(false);
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        const active = document.activeElement;
+        if (active && /input|textarea/i.test(active.tagName)) return;
+        e.preventDefault(); undo();
+    }
+});
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') save();
+});
+window.addEventListener('beforeunload', save);
+
+/* ==========================================================================
+   19. 时钟与启动
+   ========================================================================== */
+function tickClock() {
+    const d = new Date();
+    elBigClock.textContent = String(d.getHours()).padStart(2, '0') + ':' +
+        String(d.getMinutes()).padStart(2, '0') + ':' +
+        String(d.getSeconds()).padStart(2, '0');
+
+    const t = todayStr();
+    if (t !== state.date) {
+        state.date = t;
+        Object.keys(state.tabs).forEach(k => {
+            state.tabs[k].passed = {};
+            state.tabs[k].seq = 0;
+        });
+        save(); render(); toast('新的一天，打卡记录已重置');
+    }
+}
+
+function boot() {
+    state = initState();
+    parseUrlParams(); // 处理扫码参数
+    renderSoundBtn();
+    pinyinReady = detectPinyin();
+    render();
+
+    tickClock();
+    setInterval(tickClock, 1000);
+
+    if (!pinyinReady) {
+        let tries = 0;
+        const timer = setInterval(() => {
+            tries++;
+            if (detectPinyin()) {
+                pinyinReady = true;
+                clearInterval(timer);
+                pinyinCache.clear();
+                render();
+            } else if (tries >= 40) {
+                clearInterval(timer);
+            }
+        }, 100);
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+} else {
+    boot();
+}
+
+})();
+</script>
+</body>
+</html>
