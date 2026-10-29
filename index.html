@@ -7,9 +7,7 @@
 <meta name="format-detection" content="telephone=no">
 <title>班级打卡 · 谁还没交一眼看清</title>
 
-<!-- 拼音库：异步加载，失败自动回退 -->
 <script async src="https://cdn.jsdelivr.net/npm/pinyin-pro@3/dist/index.js" onload="window.__pyLoadOk=true" onerror="window.__pyLoadFail=true"></script>
-<!-- 二维码生成库 -->
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
 <style>
@@ -370,6 +368,22 @@ button{
 .passed-col .cname{ font-size: 15px; color: #3E7A55; }
 .passed-col .cname.long{ font-size: 13px; }
 
+/* 前三名奖牌 */
+.medal{
+    position: absolute;
+    top: 9px;
+    right: 6px;
+    font-size: 15px;
+    line-height: 1;
+    pointer-events: none;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,.16));
+    animation: medalIn .45s cubic-bezier(.2,1.4,.4,1);
+}
+@keyframes medalIn{
+    from{ transform: scale(0) rotate(-40deg); opacity: 0; }
+    to  { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
 body.edit-mode .pending-col .card{
     box-shadow: 0 0 0 3px var(--orange), var(--shadow);
 }
@@ -388,62 +402,310 @@ body.edit-mode .passed-col .card{
 }
 .empty-tip .big{ font-size: 40px; display: block; margin-bottom: 8px; }
 
-/* ---------- 3.4 右侧底部区域（时钟 & 麦克风） ---------- */
+/* ---------- 3.4 右侧底部控制台 ---------- */
 .right-dash{
     flex: none;
     margin-top: 10px;
-    background: rgba(255,255,255,0.6);
-    border-radius: 18px;
-    padding: 10px 20px;
+    background: rgba(255,255,255,0.72);
+    border-radius: 20px;
+    padding: 10px 12px;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 8px;
     box-shadow: var(--shadow-sm);
     border: 1px solid #E6F6EC;
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
 }
 
+.dash-top{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.clock-box{
+    flex: 1;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    min-width: 0;
+}
 .big-clock{
-    font-size: 54px;
+    font-size: clamp(26px, 2.6vw, 44px);
     font-weight: 900;
     color: var(--ink);
     font-variant-numeric: tabular-nums;
-    letter-spacing: 2px;
+    letter-spacing: 1.2px;
     line-height: 1;
-    text-shadow: 0 2px 4px rgba(90,74,66,.1);
+    text-shadow: 0 2px 6px rgba(90,74,66,.10);
+}
+.clock-date{
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--muted);
+    letter-spacing: .4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.mic-box{
+.mic-side{
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
+    gap: 6px;
+    flex: none;
 }
 .mic-btn{
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
     background: #FFF1E6;
     color: #C97B4E;
-    font-size: 15px;
-    font-weight: 800;
-    padding: 8px 16px;
-    border-radius: 12px;
-    transition: all .2s;
+    font-size: 19px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform .12s ease, background .2s ease, box-shadow .2s ease;
 }
+.mic-btn:active{ transform: scale(.92); }
 .mic-btn.active{
     background: linear-gradient(135deg, #FF9FAE 0%, #FF8FA3 100%);
     color: #fff;
-    box-shadow: 0 3px 10px rgba(255,143,163,.4);
+    box-shadow: 0 4px 14px rgba(255,143,163,.45);
+    animation: micPulse 1.8s ease-in-out infinite;
 }
-.wave-bars{
+@keyframes micPulse{
+    0%,100%{ box-shadow: 0 4px 14px rgba(255,143,163,.45); }
+    50%    { box-shadow: 0 4px 24px rgba(255,143,163,.90); }
+}
+
+/* 舞台 */
+.wave-stage{
+    position: relative;
+    width: 100%;
+    height: 150px;
+    border-radius: 16px;
+    overflow: hidden;
+    background: radial-gradient(130% 150% at 50% 115%, #FFEFF4 0%, #FFFBF7 65%, #FFFFFF 100%);
+    box-shadow: inset 0 0 0 2px #FFE9EE, inset 0 -18px 26px rgba(255,143,163,.06);
+    transition: box-shadow .25s ease;
+}
+.wave-stage.live{
+    box-shadow: inset 0 0 0 2px #FFC9D6, inset 0 -18px 26px rgba(255,143,163,.12);
+}
+#waveCanvas{
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+.stage-dom{
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+.stage-dom > *{ position: absolute; }
+.stage-dom button{ pointer-events: auto; }
+
+.wave-badge{
+    position: absolute;
+    left: 10px;
+    top: 9px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .4px;
+    color: #C97B4E;
+    background: rgba(255,255,255,.82);
+    padding: 4px 11px;
+    border-radius: 99px;
+    pointer-events: none;
+    white-space: nowrap;
+    transition: background .25s ease, color .25s ease, box-shadow .25s ease;
+    z-index: 6;
+}
+.wave-stage.live .wave-badge{
+    color: #fff;
+    background: linear-gradient(135deg, #FF9FAE 0%, #FF8FA3 100%);
+    box-shadow: 0 3px 10px rgba(255,143,163,.42);
+}
+
+/* 模式切换 */
+.mode-picker{
+    position: absolute;
+    left: 50%;
+    bottom: 7px;
+    transform: translateX(-50%);
     display: flex;
-    gap: 5px;
-    height: 36px;
-    align-items: flex-end;
+    gap: 3px;
+    background: rgba(255,255,255,.78);
+    padding: 4px;
+    border-radius: 99px;
+    z-index: 8;
+    box-shadow: 0 2px 8px rgba(140,110,90,.12);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
 }
-.wave-bar{
-    width: 8px;
-    height: 10%;
-    background: var(--pink);
-    border-radius: 4px;
-    transition: height 0.08s ease-out;
+.mode-btn{
+    width: 30px;
+    height: 26px;
+    border-radius: 99px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .15s ease, transform .12s ease, opacity .15s ease;
+    opacity: .55;
+    pointer-events: auto;
+}
+.mode-btn.active{
+    background: linear-gradient(135deg, #FF9FAE 0%, #FF8FA3 100%);
+    opacity: 1;
+    box-shadow: 0 2px 6px rgba(255,143,163,.4);
+    transform: scale(1.05);
+}
+
+/* 双模式 */
+.dual-layer{ position: absolute; inset: 0; }
+.dual-stars{ position: absolute; inset: 0; }
+.dual-stars i{
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #FFE08A;
+    box-shadow: 0 0 8px #FFE08A;
+    opacity: .15;
+    transition: opacity .25s ease, transform .25s ease;
+}
+.dual-moon{
+    position: absolute;
+    left: 50%;
+    top: 54%;
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle at 35% 32%, #fffdf0, #f2e2a0);
+    box-shadow: 0 0 40px rgba(255,238,176,.5);
+    opacity: .1;
+    transition: opacity .25s ease;
+}
+.dual-val{
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 8px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: .5px;
+    color: #C97B4E;
+    text-shadow: 0 1px 0 #fff;
+    z-index: 4;
+}
+.dual-sub{
+    position: absolute;
+    right: 10px;
+    top: 8px;
+    display: flex;
+    gap: 4px;
+    z-index: 8;
+    background: rgba(255,255,255,.78);
+    padding: 3px;
+    border-radius: 99px;
+    box-shadow: 0 2px 8px rgba(140,110,90,.10);
+}
+.dual-sub button{
+    width: 30px;
+    height: 26px;
+    border-radius: 99px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: .55;
+    transition: background .15s ease, opacity .15s ease;
+}
+.dual-sub button.active{
+    background: linear-gradient(135deg, #FF9FAE 0%, #FF8FA3 100%);
+    opacity: 1;
+    box-shadow: 0 2px 6px rgba(255,143,163,.4);
+}
+
+/* 声控进度 */
+.prog-layer{ position: absolute; inset: 0; }
+.prog-track{
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #EAF4FF, #D6E9FF);
+    overflow: hidden;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,.06);
+}
+.prog-fill{
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    background: linear-gradient(90deg, rgba(110,198,255,.5), rgba(139,92,246,.5));
+    border-radius: 12px;
+    transition: width .3s linear;
+}
+.prog-swimmer{
+    position: absolute;
+    bottom: -2px;
+    left: 3%;
+    font-size: 26px;
+    transform: translateX(-50%);
+    transition: left .3s linear;
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,.15));
+    z-index: 3;
+}
+.prog-goal{
+    position: absolute;
+    right: 4px;
+    bottom: -2px;
+    font-size: 24px;
+    opacity: .8;
+    z-index: 2;
+}
+.prog-reset{
+    position: absolute;
+    right: 10px;
+    top: 8px;
+    width: 30px;
+    height: 26px;
+    border-radius: 99px;
+    font-size: 14px;
+    background: rgba(255,255,255,.78);
+    color: #8A7568;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 8;
+    box-shadow: 0 2px 8px rgba(140,110,90,.10);
+    pointer-events: auto;
+}
+.prog-reset:active{ transform: scale(.92); }
+
+/* 气球 */
+.balloon-layer{
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+}
+.balloon{
+    position: absolute;
+    font-size: 22px;
+    bottom: -30px;
+    will-change: transform;
+    pointer-events: none;
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,.06));
 }
 
 /* ---------- 3.5 底部工具栏 ---------- */
@@ -936,7 +1198,7 @@ body.edit-mode .passed-col .card{
 }
 
 /* ==========================================================================
-   9. 响应式：窄屏上下两栏（<768px 强制上下，横屏平板保持左右）
+   9. 响应式
    ========================================================================== */
 @media (max-width: 768px){
     .app{ padding: 8px; gap: 8px; }
@@ -967,9 +1229,26 @@ body.edit-mode .passed-col .card{
     .passed-col .card{ height: 70px; }
     .passed-col .avatar{ width: 26px; height: 26px; font-size: 14px; }
     .passed-col .cname{ font-size: 13px; }
+    .medal{ font-size: 13px; top: 7px; right: 5px; }
 
-    .right-dash{ flex-direction: column; gap: 10px; padding: 12px; }
-    .big-clock{ font-size: 42px; }
+    .right-dash{ padding: 8px; gap: 6px; border-radius: 16px; }
+    .dash-top{ gap: 6px; }
+    .big-clock{ font-size: 24px; letter-spacing: .8px; }
+    .clock-date{ display: none; }
+    .mic-btn{ width: 38px; height: 38px; font-size: 16px; border-radius: 11px; }
+    .wave-stage{ height: 118px; border-radius: 13px; }
+    .wave-badge{ font-size: 11px; padding: 3px 9px; top: 7px; left: 8px; }
+    .mode-picker{ bottom: 5px; padding: 3px; gap: 2px; }
+    .mode-btn{ width: 26px; height: 23px; font-size: 12px; }
+    .dual-val{ font-size: 16px; top: 6px; }
+    .dual-moon{ width: 46px; height: 46px; }
+    .dual-sub{ right: 8px; top: 6px; padding: 2px; }
+    .dual-sub button{ width: 26px; height: 23px; font-size: 12px; }
+    .prog-track{ bottom: 34px; height: 34px; left: 10px; right: 10px; }
+    .prog-swimmer{ font-size: 22px; }
+    .prog-goal{ font-size: 20px; }
+    .prog-reset{ top: 6px; right: 8px; width: 26px; height: 23px; font-size: 12px; }
+    .balloon{ font-size: 18px; }
 
     .tb{ height: 46px; padding: 0 14px; font-size: 15px; flex: 1; }
     .tb.more{ flex: none; width: 46px; }
@@ -985,7 +1264,8 @@ body.edit-mode .passed-col .card{
     .passed-col .card{ height: 90px; }
     .passed-col .avatar{ width: 38px; height: 38px; font-size: 18px; }
     .passed-col .cname{ font-size: 16px; }
-    .big-clock{ font-size: 64px; }
+    .wave-stage{ height: 170px; }
+    .mic-btn{ width: 50px; height: 50px; font-size: 22px; }
 }
 
 @media (prefers-reduced-motion: reduce){
@@ -1009,7 +1289,7 @@ body.edit-mode .passed-col .card{
             <div class="prog-text" id="progText">已交 <span class="num">0</span> / 0</div>
             <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
         </div>
-        
+
         <button class="icon-btn" id="soundBtn" title="声音开关">🔊</button>
     </header>
 
@@ -1029,19 +1309,60 @@ body.edit-mode .passed-col .card{
                 <span class="col-count" id="passedCount">0</span>
             </div>
             <div class="grid" id="passedGrid"></div>
-            
-            <!-- 底部时间与麦克风 -->
+
+            <!-- 右侧控制台 -->
             <div class="right-dash">
-                <div class="big-clock" id="bigClock">08:00:00</div>
-                <div class="mic-box">
-                    <button class="mic-btn" id="micBtn">🎤 开启音浪</button>
-                    <div class="wave-bars" id="waveBars">
-                        <div class="wave-bar"></div>
-                        <div class="wave-bar"></div>
-                        <div class="wave-bar"></div>
-                        <div class="wave-bar"></div>
-                        <div class="wave-bar"></div>
+                <div class="dash-top">
+                    <div class="clock-box">
+                        <div class="big-clock" id="bigClock">08:00:00</div>
+                        <div class="clock-date" id="clockDate">—</div>
                     </div>
+                    <div class="mic-side">
+                        <button class="mic-btn" id="micBtn" title="开启 / 关闭麦克风">🎤</button>
+                        <button class="mic-btn" id="micThemeBtn" title="切换音浪配色">🎨</button>
+                    </div>
+                </div>
+
+                <div class="wave-stage" id="waveStage" data-mode="wave">
+                    <canvas id="waveCanvas"></canvas>
+                    <div class="stage-dom" id="stageDom">
+
+                        <!-- 双模式 -->
+                        <div class="dual-layer" id="dualLayer" style="display:none;">
+                            <div class="dual-stars" id="dualStars"></div>
+                            <div class="dual-moon" id="dualMoon"></div>
+                            <div class="dual-val" id="dualVal">0%</div>
+                            <div class="dual-sub" id="dualSub">
+                                <button data-dual="read" class="active" title="读书模式">📣</button>
+                                <button data-dual="quiet" title="安静模式">🌙</button>
+                            </div>
+                        </div>
+
+                        <!-- 声控进度 -->
+                        <div class="prog-layer" id="progLayer" style="display:none;">
+                            <div class="prog-track">
+                                <div class="prog-fill" id="progFillBar"></div>
+                                <div class="prog-swimmer" id="progSwimmer">🐋</div>
+                                <div class="prog-goal">🏝</div>
+                            </div>
+                            <button class="prog-reset" id="progReset" title="重置进度">↺</button>
+                        </div>
+
+                        <!-- 气球 -->
+                        <div class="balloon-layer" id="balloonLayer" style="display:none;"></div>
+
+                    </div>
+
+                    <!-- 模式切换 -->
+                    <div class="mode-picker" id="modePicker">
+                        <button class="mode-btn active" data-mode="wave" title="音浪">🌊</button>
+                        <button class="mode-btn" data-mode="dual" title="双模式">🌙</button>
+                        <button class="mode-btn" data-mode="progress" title="声控进度">🐋</button>
+                        <button class="mode-btn" data-mode="firework" title="烟花">🎆</button>
+                        <button class="mode-btn" data-mode="balloon" title="气球">🎈</button>
+                    </div>
+
+                    <span class="wave-badge" id="waveBadge">🎤 点击开启音浪</span>
                 </div>
             </div>
         </section>
@@ -1262,6 +1583,7 @@ body.edit-mode .passed-col .card{
    ========================================================================== */
 const STORAGE_KEY  = 'daka_v5';
 const DATA_VERSION = 5;
+const PROG_KEY     = 'daka_prog_v1';
 
 const DEFAULT_TABS = [
     { id: 'morning',    name: '早读' },
@@ -1390,7 +1712,6 @@ function initState() {
         DEFAULT_TABS.forEach(def => { s.tabs[def.id] = createTab(def, DEFAULT_NAMES); });
     }
 
-    // 补齐结构
     Object.keys(s.tabs).forEach(k => {
         const t = s.tabs[k];
         if (!t.passed) t.passed = {};
@@ -1398,7 +1719,6 @@ function initState() {
         if (!Array.isArray(t.students)) t.students = [];
     });
 
-    // 跨天自动清空
     if (s.date !== todayStr()) {
         s.date = todayStr();
         Object.keys(s.tabs).forEach(k => {
@@ -1440,7 +1760,7 @@ function parseUrlParams() {
                 state.activeTab = targetId;
             } else {
                 const newId = 'custom_' + Date.now();
-                const sourceStudents = state.tabs[DEFAULT_TABS[0].id] 
+                const sourceStudents = state.tabs[DEFAULT_TABS[0].id]
                     ? JSON.parse(JSON.stringify(state.tabs[DEFAULT_TABS[0].id].students))
                     : createTab({id:newId,name:taskName}, DEFAULT_NAMES).students;
                 state.tabs[newId] = {
@@ -1493,13 +1813,12 @@ function sortPending(tab) {
 }
 
 /* ==========================================================================
-   6. 点击特效合集（共 14 种）
+   6. 点击特效合集
    ========================================================================== */
 const fxLayer = document.createElement('div');
 fxLayer.id = 'fxLayer';
 document.body.appendChild(fxLayer);
 
-// 1. 星星四散
 function fxStars(x, y) {
     const n = 9;
     for (let i = 0; i < n; i++) {
@@ -1518,7 +1837,6 @@ function fxStars(x, y) {
     }
 }
 
-// 2. 爱心上飘
 function fxHearts(x, y) {
     for (let i = 0; i < 6; i++) {
         const el = document.createElement('div');
@@ -1536,7 +1854,6 @@ function fxHearts(x, y) {
     }
 }
 
-// 3. 彩纸屑
 function fxConfetti(x, y) {
     const colors = ['#FF8FA3','#FFB86B','#FFD93D','#7ED9A0','#6EC6FF','#B39DDB'];
     for (let i = 0; i < 18; i++) {
@@ -1557,7 +1874,6 @@ function fxConfetti(x, y) {
     }
 }
 
-// 4. 圆环涟漪
 function fxRipple(x, y) {
     const colors = ['#FF8FA3', '#FFB86B', '#7ED9A0'];
     for (let i = 0; i < 3; i++) {
@@ -1575,7 +1891,6 @@ function fxRipple(x, y) {
     }
 }
 
-// 5. 闪光点
 function fxSparkles(x, y) {
     for (let i = 0; i < 11; i++) {
         const el = document.createElement('div');
@@ -1592,7 +1907,6 @@ function fxSparkles(x, y) {
     }
 }
 
-// 6. 卡片弹跳
 function fxBounce(x, y, cardEl) {
     if (!cardEl) return;
     cardEl.animate([
@@ -1603,7 +1917,6 @@ function fxBounce(x, y, cardEl) {
     ], { duration: 430, easing: 'ease-out' });
 }
 
-// 7. 彩虹光环
 function fxRainbow(x, y) {
     for (let i = 0; i < 2; i++) {
         const el = document.createElement('div');
@@ -1621,7 +1934,6 @@ function fxRainbow(x, y) {
     }
 }
 
-// 8. 大表情弹出
 function fxEmojiPop(x, y) {
     const emojis = ['😍', '🎉', '👍', '✨', '🌟', '🥳', '💯'];
     const el = document.createElement('div');
@@ -1638,7 +1950,6 @@ function fxEmojiPop(x, y) {
     ], { duration: 900, easing: 'ease-out' }).onfinish = () => el.remove();
 }
 
-// 9. 烟花
 function fxFirework(x, y) {
     for(let i=0; i<25; i++) {
         const el = document.createElement('div');
@@ -1658,7 +1969,6 @@ function fxFirework(x, y) {
     }
 }
 
-// 10. 天降表情
 function fxEmojiRain(x, y) {
     const emojis = ['🎈','🍬','🌈','🌟','🎁','🍭'];
     for(let i=0; i<12; i++) {
@@ -1676,7 +1986,6 @@ function fxEmojiRain(x, y) {
     }
 }
 
-// 11. 夸奖文字
 function fxTextPop(x, y) {
     const words = ['太棒了', '真厉害', '666', '满分', '优秀', '漂亮'];
     const el = document.createElement('div');
@@ -1695,7 +2004,6 @@ function fxTextPop(x, y) {
     ], { duration: 1000, easing: 'ease-out' }).onfinish = () => el.remove();
 }
 
-// 12. 泡泡上升
 function fxBubble(x, y) {
     for(let i=0; i<8; i++) {
         const el = document.createElement('div');
@@ -1715,7 +2023,6 @@ function fxBubble(x, y) {
     }
 }
 
-// 13. 闪电
 function fxLightning(x, y) {
     const el = document.createElement('div');
     el.className = 'fx-item';
@@ -1731,7 +2038,6 @@ function fxLightning(x, y) {
     ], { duration: 600, easing: 'ease-in-out' }).onfinish = () => el.remove();
 }
 
-// 14. 螺旋飞出
 function fxSpiral(x, y) {
     for(let i=0; i<6; i++) {
         const el = document.createElement('div');
@@ -1749,9 +2055,8 @@ function fxSpiral(x, y) {
     }
 }
 
-// 特效池（共14个）
 const FX_FNS = [
-    fxStars, fxHearts, fxConfetti, fxRipple, 
+    fxStars, fxHearts, fxConfetti, fxRipple,
     fxSparkles, fxBounce, fxRainbow, fxEmojiPop,
     fxFirework, fxEmojiRain, fxTextPop, fxBubble,
     fxLightning, fxSpiral
@@ -1765,67 +2070,696 @@ function spawnEffect(x, y, cardEl) {
 }
 
 /* ==========================================================================
-   7. 麦克风音浪控制
+   7. 舞台：音浪 / 双模式 / 声控进度 / 烟花 / 气球
    ========================================================================== */
+const MAX_BARS = 48;
+const WAVE_THEMES = [
+    { name: '糖果', colors: ['#FF8FA3', '#FFB86B', '#FFD93D', '#7ED9A0', '#6EC6FF'] },
+    { name: '霓虹', colors: ['#FF5FA2', '#B46BFF', '#5C9BFF', '#31E1D6', '#8CFF9B'] },
+    { name: '极光', colors: ['#7ED9A0', '#31E1D6', '#6EC6FF', '#B46BFF', '#FF8FA3'] },
+    { name: '火焰', colors: ['#FFD93D', '#FFB86B', '#FF8A5B', '#FF6B6B', '#FF3D6E'] },
+    { name: '海洋', colors: ['#6EC6FF', '#4FA8FF', '#8C7BFF', '#C06BFF', '#FF8FA3'] }
+];
+
+let waveThemeIdx = 0;
 let micStream = null;
 let audioAnalyser = null;
 let micDataArray = null;
-let micRaf = null;
 
+let waveCanvas = null, waveCtx = null;
+let waveW = 0, waveH = 0, waveDPR = 1;
+let barCount = 24;
+let barLevels = new Float32Array(MAX_BARS);
+let barPeaks  = new Float32Array(MAX_BARS);
+const barTargets = new Float32Array(MAX_BARS);
+let waveParticles = [];
+let waveLevel = 0;
+let micLevel = 0;
+let waveRunning = false;
+let waveRaf = null;
+let lastFrameT = 0;
+let lastBurstT = 0;
+let badgeTextCache = '';
+
+/* 舞台模式 */
+let stageMode = 'wave';
+let dualMode = 'read';
+let progValue = 0;
+let progSaved = false;
+let progSaveTimer = null;
+
+/* DOM 引用 */
+let waveStage, dualLayer, progLayer, balloonLayer;
+let dualStarsBox, dualMoonEl, dualValEl;
+let progFillEl, progSwimmerEl;
+let dualStarEls = [];
+let modeBtns = [];
+
+/* 烟花 */
+let fwParticles = [];
+let fwTimer = 0;
+
+/* 气球 */
+let balloonEls = [];
+
+/* --- 颜色工具 --- */
+function hexToRgb(hex) {
+    let h = String(hex).replace('#', '');
+    if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    const n = parseInt(h, 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+function rgbToHex(r, g, b) {
+    const f = v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+    return '#' + f(r) + f(g) + f(b);
+}
+function mixHex(a, b, t) {
+    const A = hexToRgb(a), B = hexToRgb(b);
+    return rgbToHex(A.r + (B.r - A.r) * t, A.g + (B.g - A.g) * t, A.b + (B.b - A.b) * t);
+}
+function themeColor(theme, t) {
+    const cols = theme.colors;
+    const seg = cols.length - 1;
+    const p = Math.max(0, Math.min(1, t)) * seg;
+    const i = Math.min(seg - 1, Math.floor(p));
+    return mixHex(cols[i], cols[i + 1], p - i);
+}
+
+/* --- 进度持久化 --- */
+function loadProg() {
+    try {
+        const raw = localStorage.getItem(PROG_KEY);
+        if (!raw) return;
+        const o = JSON.parse(raw);
+        if (o.date === todayStr()) {
+            progValue = Math.max(0, Math.min(100, Number(o.value) || 0));
+            progSaved = !!o.saved;
+        }
+    } catch (e) {}
+}
+function saveProg() {
+    try {
+        localStorage.setItem(PROG_KEY, JSON.stringify({
+            date: todayStr(), value: progValue, saved: progSaved
+        }));
+    } catch (e) {}
+}
+function throttledSaveProg() {
+    if (progSaveTimer) return;
+    progSaveTimer = setTimeout(() => {
+        progSaveTimer = null;
+        saveProg();
+    }, 2000);
+}
+
+/* --- 初始化舞台 --- */
+function initStage() {
+    waveCanvas = $('#waveCanvas');
+    waveCtx = waveCanvas.getContext('2d');
+    waveStage = $('#waveStage');
+    dualLayer = $('#dualLayer');
+    progLayer = $('#progLayer');
+    balloonLayer = $('#balloonLayer');
+    dualStarsBox = $('#dualStars');
+    dualMoonEl = $('#dualMoon');
+    dualValEl = $('#dualVal');
+    progFillEl = $('#progFillBar');
+    progSwimmerEl = $('#progSwimmer');
+    modeBtns = $$('.mode-btn');
+
+    resizeWave();
+    if (window.ResizeObserver) {
+        try { new ResizeObserver(resizeWave).observe(waveStage); } catch (e) {}
+    }
+    window.addEventListener('resize', resizeWave);
+
+    buildDualStars();
+    loadProg();
+    updateProgressUI();
+
+    bindStageEvents();
+    startStageLoop();
+}
+
+function buildDualStars() {
+    if (!dualStarsBox) return;
+    dualStarsBox.innerHTML = '';
+    dualStarEls = [];
+    for (let i = 0; i < 36; i++) {
+        const s = document.createElement('i');
+        s.style.left = (Math.random() * 92 + 4) + '%';
+        s.style.top = (Math.random() * 78 + 8) + '%';
+        dualStarsBox.appendChild(s);
+        dualStarEls.push(s);
+    }
+}
+
+function bindStageEvents() {
+    modeBtns.forEach(btn => {
+        btn.addEventListener('click', () => setStageMode(btn.dataset.mode));
+    });
+    $$('.dual-sub button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            dualMode = btn.dataset.dual;
+            $$('.dual-sub button').forEach(b => b.classList.toggle('active', b === btn));
+            badgeTextCache = '';
+        });
+    });
+    const resetBtn = $('#progReset');
+    if (resetBtn) resetBtn.addEventListener('click', resetProgress);
+}
+
+function setStageMode(mode) {
+    if (stageMode === mode) return;
+    stageMode = mode;
+    waveStage.dataset.mode = mode;
+
+    if (waveCtx) waveCtx.clearRect(0, 0, waveW, waveH);
+    fwParticles.length = 0;
+    fwTimer = 0;
+
+    if (mode !== 'balloon') {
+        balloonEls.forEach(b => b.el.remove());
+        balloonEls.length = 0;
+    }
+
+    dualLayer.style.display = mode === 'dual' ? 'block' : 'none';
+    progLayer.style.display = mode === 'progress' ? 'block' : 'none';
+    balloonLayer.style.display = mode === 'balloon' ? 'block' : 'none';
+
+    modeBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+    badgeTextCache = '';
+    updateWaveBadge();
+    if (mode === 'progress') updateProgressUI();
+}
+
+function resizeWave() {
+    if (!waveCanvas) return;
+    const rect = waveCanvas.getBoundingClientRect();
+    waveDPR = Math.min(window.devicePixelRatio || 1, 2);
+    waveW = Math.max(1, Math.round(rect.width));
+    waveH = Math.max(1, Math.round(rect.height));
+    waveCanvas.width  = Math.round(waveW * waveDPR);
+    waveCanvas.height = Math.round(waveH * waveDPR);
+    waveCtx.setTransform(waveDPR, 0, 0, waveDPR, 0, 0);
+    barCount = Math.max(10, Math.min(MAX_BARS, Math.floor(waveW / 20)));
+}
+
+function startStageLoop() {
+    if (waveRunning) return;
+    waveRunning = true;
+    lastFrameT = 0;
+    waveRaf = requestAnimationFrame(stageLoop);
+}
+
+function stageLoop(now) {
+    if (!waveRunning) return;
+    if (!lastFrameT) lastFrameT = now;
+    let dt = (now - lastFrameT) / 16.667;
+    if (dt > 3) dt = 3;
+    if (dt < 0.2) dt = 0.2;
+    lastFrameT = now;
+
+    let freqData = null;
+    if (audioAnalyser && micDataArray) {
+        audioAnalyser.getByteFrequencyData(micDataArray);
+        freqData = micDataArray;
+    }
+
+    updateMicLevel(freqData);
+
+    if (stageMode === 'wave') {
+        stepWaveBars(freqData, now, dt);
+        drawWave();
+    } else if (stageMode === 'firework') {
+        renderFirework(now, dt);
+    } else if (stageMode === 'dual') {
+        renderDual();
+    } else if (stageMode === 'progress') {
+        renderProgress(dt);
+    } else if (stageMode === 'balloon') {
+        renderBalloon(now, dt);
+    }
+
+    updateWaveBadge();
+    waveRaf = requestAnimationFrame(stageLoop);
+}
+
+function updateMicLevel(freqData) {
+    if (freqData) {
+        let sum = 0;
+        const n = Math.min(64, freqData.length);
+        for (let i = 0; i < n; i++) sum += freqData[i];
+        const raw = sum / n / 255;
+        micLevel += (raw - micLevel) * 0.25;
+    } else {
+        const t = performance.now() / 1000;
+        const sim = 0.06 + 0.04 * Math.sin(t * 1.2) + 0.02 * Math.sin(t * 3.1);
+        micLevel += (sim - micLevel) * 0.08;
+    }
+    if (micLevel < 0) micLevel = 0;
+    if (micLevel > 1) micLevel = 1;
+}
+
+/* --- 音浪柱 --- */
+function stepWaveBars(freqData, now, dt) {
+    const live = !!freqData;
+
+    if (live) {
+        const bins = freqData.length;
+        const top = Math.min(bins, 72);
+        for (let k = 0; k < barCount; k++) {
+            const a = Math.floor(Math.pow(k / barCount, 1.7) * top);
+            const b = Math.max(a + 1, Math.floor(Math.pow((k + 1) / barCount, 1.7) * top));
+            let sum = 0, cnt = 0;
+            for (let j = a; j < b && j < bins; j++) { sum += freqData[j]; cnt++; }
+            const v = cnt ? (sum / cnt) / 255 : 0;
+            barTargets[k] = Math.min(1, Math.pow(v, 0.8) * 1.45);
+        }
+    } else {
+        for (let k = 0; k < barCount; k++) {
+            const v = 0.05 + 0.05 * (0.5 + 0.5 * Math.sin(now / 640 + k * 0.42));
+            barTargets[k] = v;
+        }
+    }
+
+    for (let k = 0; k < barCount; k++) {
+        const t = barTargets[k];
+        const cur = barLevels[k];
+        const up = live ? 0.62 : 0.10;
+        const down = live ? 0.15 : 0.06;
+        barLevels[k] = cur + (t - cur) * Math.min(1, (t > cur ? up : down) * dt);
+        if (barLevels[k] >= barPeaks[k]) barPeaks[k] = barLevels[k];
+        else barPeaks[k] = Math.max(0, barPeaks[k] - 0.010 * dt);
+    }
+
+    let total = 0;
+    for (let k = 0; k < barCount; k++) total += barLevels[k];
+    const avg = total / barCount;
+    waveLevel += (avg - waveLevel) * Math.min(1, 0.20 * dt);
+
+    if (live && waveLevel > 0.32) {
+        const n = Math.min(4, Math.floor(waveLevel * 6));
+        for (let i = 0; i < n; i++) {
+            if (Math.random() > 0.6) continue;
+            waveParticles.push({
+                x: Math.random() * waveW,
+                y: waveH - 8,
+                vx: (Math.random() - 0.5) * 0.9,
+                vy: -(0.7 + Math.random() * 2.0),
+                r: 1.2 + Math.random() * 2.6,
+                life: 1,
+                t: Math.random()
+            });
+        }
+    }
+    for (let i = waveParticles.length - 1; i >= 0; i--) {
+        const p = waveParticles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 0.025 * dt;
+        p.life -= 0.011 * dt;
+        if (p.life <= 0 || p.y < -30) waveParticles.splice(i, 1);
+    }
+    if (waveParticles.length > 180) waveParticles.splice(0, waveParticles.length - 180);
+
+    if (live && waveLevel > 0.6 && now - lastBurstT > 1500) {
+        lastBurstT = now;
+        burstWave();
+    }
+}
+
+function burstWave() {
+    const x = window.innerWidth * (0.2 + Math.random() * 0.6);
+    const y = window.innerHeight * (0.18 + Math.random() * 0.35);
+    fxConfetti(x, y);
+    if (Math.random() < 0.55) fxFirework(x, y);
+    if (Math.random() < 0.25) fxTextPop(x, y);
+}
+
+function roundRectPath(ctx, x, y, w, h, r) {
+    r = Math.max(0, Math.min(r, w / 2, h / 2));
+    ctx.beginPath();
+    if (ctx.roundRect) { ctx.roundRect(x, y, w, h, r); return; }
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.arcTo(x + w, y, x + w, y + r, r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+    ctx.lineTo(x + r, y + h);
+    ctx.arcTo(x, y + h, x, y + h - r, r);
+    ctx.lineTo(x, y + r);
+    ctx.arcTo(x, y, x + r, y, r);
+    ctx.closePath();
+}
+
+function drawBar(ctx, x, w, h, ph, color, intensity, baseY) {
+    const y = baseY - h;
+    const r = Math.min(w / 2, 4);
+
+    const g = ctx.createLinearGradient(0, y, 0, baseY);
+    g.addColorStop(0, mixHex(color, '#FFFFFF', 0.45));
+    g.addColorStop(0.55, color);
+    g.addColorStop(1, mixHex(color, '#FFFFFF', 0.12));
+
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 5 + intensity * 16;
+    ctx.fillStyle = g;
+    roundRectPath(ctx, x, y, w, h, r);
+    ctx.fill();
+    ctx.restore();
+
+    const py = baseY - ph - 3;
+    ctx.save();
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 7;
+    roundRectPath(ctx, x, py, w, 2.4, 1.2);
+    ctx.fill();
+    ctx.restore();
+}
+
+function drawWave() {
+    if (!waveCtx || waveW <= 0 || waveH <= 0) return;
+    const ctx = waveCtx;
+    const W = waveW, H = waveH;
+    ctx.clearRect(0, 0, W, H);
+
+    const theme = WAVE_THEMES[waveThemeIdx];
+    const baseY = H - 9;
+    const maxH = H - 30;
+    const cx = W / 2;
+    const gap = Math.max(1.5, W / 300);
+    const usable = W * 0.94;
+    const barW = Math.max(2, (usable / 2 - gap * (barCount - 1)) / barCount);
+    if (barW <= 0) return;
+
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    const lg = ctx.createLinearGradient(0, 0, W, 0);
+    lg.addColorStop(0, 'rgba(255,143,163,0)');
+    lg.addColorStop(0.5, 'rgba(255,143,163,0.65)');
+    lg.addColorStop(1, 'rgba(255,143,163,0)');
+    ctx.fillStyle = lg;
+    ctx.fillRect(0, baseY + 1, W, 1.5);
+    ctx.restore();
+
+    for (let k = 0; k < barCount; k++) {
+        const idx = Math.min(MAX_BARS - 1, k);
+        const ratio = Math.max(0, Math.min(1, barLevels[idx]));
+        const peakR = Math.max(0, Math.min(1, barPeaks[idx]));
+        const color = themeColor(theme, k / Math.max(1, barCount - 1));
+        const offset = gap * 0.5 + k * (barW + gap);
+        const h = Math.max(3, ratio * maxH);
+        const ph = Math.max(3, peakR * maxH);
+
+        drawBar(ctx, cx + offset, barW, h, ph, color, ratio, baseY);
+        drawBar(ctx, cx - offset - barW, barW, h, ph, color, ratio, baseY);
+    }
+
+    for (let i = 0; i < waveParticles.length; i++) {
+        const p = waveParticles[i];
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.life) * 0.9;
+        ctx.fillStyle = themeColor(theme, p.t);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+/* --- 双模式 --- */
+function renderDual() {
+    if (!dualStarEls.length) return;
+    const level = micLevel;
+    if (dualMode === 'read') {
+        const on = Math.round(level * dualStarEls.length);
+        dualStarEls.forEach((s, i) => {
+            const lit = i < on;
+            s.style.opacity = lit ? 1 : 0.12;
+            s.style.transform = `scale(${lit ? 1.5 : 1})`;
+        });
+        dualMoonEl.style.opacity = 0.06;
+        dualValEl.textContent = Math.round(level * 100) + '%';
+    } else {
+        dualStarEls.forEach(s => { s.style.opacity = 0.15; s.style.transform = 'scale(1)'; });
+        const q = 1 - level;
+        dualMoonEl.style.opacity = (0.2 + 0.8 * q).toFixed(2);
+        dualValEl.textContent = '安静 ' + Math.round(q * 100) + '%';
+    }
+}
+
+/* --- 声控进度 --- */
+function renderProgress(dt) {
+    const level = micLevel;
+
+    if (!progSaved && level > 0.08) {
+        const k = 0.005;
+        progValue = Math.min(100, progValue + level * dt * k);
+        if (progValue >= 100) {
+            progValue = 100;
+            progSaved = true;
+            saveProg();
+            onProgressComplete();
+        }
+        throttledSaveProg();
+    }
+
+    updateProgressUI();
+}
+
+function updateProgressUI() {
+    if (!progFillEl || !progSwimmerEl) return;
+    progFillEl.style.width = progValue + '%';
+    progSwimmerEl.style.left = Math.max(3, Math.min(97, progValue)) + '%';
+}
+
+function onProgressComplete() {
+    toast('🏝 声浪进度已满，已自动存入今日记录');
+    const tab = currentTab();
+    if (!tab.students.length) return;
+    const records = tab.students.map(s => ({
+        name: s.name,
+        sid: s.sid,
+        passed: !!tab.passed[s.id],
+        time: tab.passed[s.id] ? tab.passed[s.id].time : null
+    }));
+    state.history.unshift({
+        id: Date.now(), date: state.date, project: tab.name,
+        total: tab.students.length,
+        passed: records.filter(r => r.passed).length,
+        records: records
+    });
+    if (state.history.length > 300) state.history.length = 300;
+    save();
+    celebrateAllDone(true);
+}
+
+function resetProgress() {
+    progValue = 0;
+    progSaved = false;
+    saveProg();
+    updateProgressUI();
+    toast('声浪进度已重置');
+}
+
+/* --- 烟花 --- */
+function spawnFireworkBurst() {
+    const cx = waveW * (0.2 + Math.random() * 0.6);
+    const cy = waveH * (0.2 + Math.random() * 0.4);
+    const hue = Math.random() * 360;
+    const n = 30 + Math.floor(micLevel * 30);
+    for (let i = 0; i < n; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const spd = 1 + Math.random() * 3;
+        fwParticles.push({
+            x: cx, y: cy,
+            vx: Math.cos(ang) * spd,
+            vy: Math.sin(ang) * spd,
+            life: 1,
+            decay: 0.008 + Math.random() * 0.012,
+            hue: hue + (Math.random() - 0.5) * 60,
+            r: 1.5 + Math.random() * 2
+        });
+    }
+}
+
+function renderFirework(now, dt) {
+    const ctx = waveCtx;
+    const W = waveW, H = waveH;
+    ctx.clearRect(0, 0, W, H);
+
+    fwTimer -= dt;
+    if (micLevel > 0.18 && fwTimer <= 0) {
+        fwTimer = 22 - micLevel * 18;
+        spawnFireworkBurst();
+        if (micLevel > 0.55 && Math.random() < 0.55) spawnFireworkBurst();
+    }
+
+    for (let i = fwParticles.length - 1; i >= 0; i--) {
+        const p = fwParticles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 0.03 * dt;
+        p.vx *= 0.99;
+        p.vy *= 0.99;
+        p.life -= p.decay * dt;
+        if (p.life <= 0) { fwParticles.splice(i, 1); continue; }
+
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.life);
+        const c = `hsl(${p.hue}, 100%, 65%)`;
+        ctx.fillStyle = c;
+        ctx.shadowColor = c;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+    if (fwParticles.length > 400) fwParticles.splice(0, fwParticles.length - 400);
+}
+
+/* --- 气球 --- */
+function spawnBalloon() {
+    if (!balloonLayer) return;
+    const el = document.createElement('div');
+    el.className = 'balloon';
+    el.textContent = ['🎈','🎈','🩷','💛','💙','💜'][Math.floor(Math.random() * 6)];
+    el.style.left = (Math.random() * 90 + 5) + '%';
+    balloonLayer.appendChild(el);
+    balloonEls.push({
+        el,
+        y: 0,
+        speed: 0.6 + Math.random() * 0.8,
+        rot: (Math.random() - 0.5) * 20,
+        phase: Math.random() * 6.28
+    });
+}
+
+function renderBalloon(now, dt) {
+    const level = micLevel;
+    if (level > 0.15 && Math.random() < level * 0.09 * dt) {
+        spawnBalloon();
+    }
+
+    for (let i = balloonEls.length - 1; i >= 0; i--) {
+        const b = balloonEls[i];
+        b.y += b.speed * (0.5 + level * 2.5) * dt;
+        b.rot += Math.sin(now / 800 + b.phase) * 0.3 * dt;
+        b.el.style.transform = `translateY(${-b.y}px) rotate(${b.rot}deg)`;
+        if (b.y > waveH + 40) {
+            b.el.remove();
+            balloonEls.splice(i, 1);
+        }
+    }
+
+    if (balloonEls.length > 40) {
+        const extra = balloonEls.splice(0, balloonEls.length - 40);
+        extra.forEach(b => b.el.remove());
+    }
+}
+
+/* --- 徽章文字 --- */
+function updateWaveBadge() {
+    const el = $('#waveBadge');
+    if (!el) return;
+    let txt = '';
+
+    if (stageMode === 'progress') {
+        if (progSaved) txt = '🏝 已到达！';
+        else {
+            const remainMin = Math.max(0, Math.ceil((100 - progValue) / 100 * 20));
+            txt = progValue >= 99 ? '🏝 即将到达' : `进度 ${Math.round(progValue)}% · 约剩 ${remainMin} 分钟`;
+        }
+    } else if (stageMode === 'dual') {
+        txt = dualMode === 'read' ? '📣 读书模式' : '🌙 安静模式';
+    } else if (stageMode === 'firework') {
+        if (micLevel > 0.55) txt = '🎆 烟花齐放';
+        else if (micLevel > 0.2) txt = '🎆 热闹起来';
+        else txt = '🎆 声音大点';
+    } else if (stageMode === 'balloon') {
+        if (micLevel > 0.45) txt = '🎈 气球升空';
+        else if (micLevel > 0.18) txt = '🎈 气球飘起来';
+        else txt = '🎈 声音再大点';
+    } else {
+        if (!audioAnalyser) {
+            txt = '🎤 点击开启音浪';
+        } else if (waveLevel < 0.10) txt = '🌙 很安静';
+        else if (waveLevel < 0.26) txt = '🙂 刚刚好';
+        else if (waveLevel < 0.48) txt = '😄 有点热闹';
+        else if (waveLevel < 0.68) txt = '🔥 很嗨';
+        else txt = '💥 爆表啦';
+    }
+
+    if (txt !== badgeTextCache) {
+        badgeTextCache = txt;
+        el.textContent = txt;
+    }
+}
+
+/* --- 麦克风开关 --- */
 function toggleMic() {
-    const btn = $('#micBtn');
-    if (micStream) {
-        micStream.getTracks().forEach(t => t.stop());
-        micStream = null;
-        if (micRaf) cancelAnimationFrame(micRaf);
-        btn.textContent = '🎤 开启音浪';
-        btn.classList.remove('active');
-        document.querySelectorAll('.wave-bar').forEach(b => b.style.height = '10%');
+    if (micStream) { stopMic(); return; }
+
+    if (location.protocol === 'file:') {
+        toast('本地文件无法使用麦克风，请部署到 HTTPS 后使用');
         return;
     }
-    
-    if (location.protocol === 'file:') {
-        toast('本地文件无法使用麦克风，请部署到网上(HTTPS)后使用');
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toast('当前浏览器不支持麦克风');
         return;
     }
 
     navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
         micStream = stream;
         const ctx = getAudioCtx();
-        const source = ctx.createMediaStreamSource(stream);
+        if (!ctx) throw new Error('音频引擎未就绪');
+        if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+
+        const src = ctx.createMediaStreamSource(stream);
         audioAnalyser = ctx.createAnalyser();
-        audioAnalyser.fftSize = 256;
-        source.connect(audioAnalyser);
+        audioAnalyser.fftSize = 512;
+        audioAnalyser.smoothingTimeConstant = 0.55;
+        src.connect(audioAnalyser);
         micDataArray = new Uint8Array(audioAnalyser.frequencyBinCount);
-        
-        btn.textContent = '⏹ 关闭音浪';
-        btn.classList.add('active');
-        
-        updateWave();
+
+        const btn = $('#micBtn');
+        if (btn) { btn.textContent = '⏹'; btn.classList.add('active'); }
+        if (waveStage) waveStage.classList.add('live');
+        badgeTextCache = '';
+        toast('音浪已开启，喊起来吧！');
     }).catch(err => {
         console.error(err);
-        toast('无法访问麦克风：' + (err.message || '请检查权限'));
+        const m = (err && err.name === 'NotAllowedError')
+            ? '麦克风权限被拒绝'
+            : ((err && err.message) || '未知错误');
+        toast('无法开启麦克风：' + m);
     });
 }
 
-function updateWave() {
-    if (!audioAnalyser) return;
-    audioAnalyser.getByteFrequencyData(micDataArray);
-    let sum = 0;
-    // 取人声主要频段
-    for (let i = 0; i < 30; i++) {
-        sum += micDataArray[i];
-    }
-    let vol = sum / 30; // 0 ~ 255
-    
-    const bars = document.querySelectorAll('.wave-bar');
-    bars.forEach((bar, i) => {
-        let h = 10 + (vol / 255) * 90 * (0.6 + Math.random()*0.6);
-        if (h > 100) h = 100;
-        bar.style.height = h + '%';
-    });
-    
-    micRaf = requestAnimationFrame(updateWave);
+function stopMic() {
+    if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+    audioAnalyser = null;
+    micDataArray = null;
+    waveParticles.length = 0;
+    for (let i = 0; i < MAX_BARS; i++) { barLevels[i] = 0; barPeaks[i] = 0; }
+    waveLevel = 0;
+    micLevel = 0;
+
+    const btn = $('#micBtn');
+    if (btn) { btn.textContent = '🎤'; btn.classList.remove('active'); }
+    if (waveStage) waveStage.classList.remove('live');
+    const badge = $('#waveBadge');
+    if (badge) { badge.textContent = '🎤 点击开启音浪'; badgeTextCache = ''; }
+}
+
+function cycleWaveTheme() {
+    waveThemeIdx = (waveThemeIdx + 1) % WAVE_THEMES.length;
+    toast('音浪配色：' + WAVE_THEMES[waveThemeIdx].name);
 }
 
 /* ==========================================================================
@@ -1845,7 +2779,7 @@ function renderTabs() {
     elTabs.appendChild(frag);
 }
 
-function renderProgress() {
+function renderProgressBar() {
     const tab = currentTab();
     const total = tab.students.length;
     const done = tab.students.filter(s => tab.passed[s.id]).length;
@@ -1898,6 +2832,18 @@ function makeCard(student, isPassed) {
     nm.className = 'cname' + (student.name.length >= 5 ? ' long' : '');
     nm.textContent = student.name;
     btn.appendChild(nm);
+
+    if (isPassed) {
+        const tab = currentTab();
+        const rec = tab.passed[student.id];
+        const seq = rec && rec.seq;
+        if (seq >= 1 && seq <= 3) {
+            const medal = document.createElement('span');
+            medal.className = 'medal';
+            medal.textContent = ['🥇', '🥈', '🥉'][seq - 1];
+            btn.appendChild(medal);
+        }
+    }
 
     btn.addEventListener('click', () => {
         if (editMode) openAvatarModal(student.id);
@@ -1956,7 +2902,7 @@ function renderPassed() {
 
 function render() {
     renderTabs();
-    renderProgress();
+    renderProgressBar();
     renderPending();
     renderPassed();
 }
@@ -1971,6 +2917,19 @@ function pushUndo(tab) {
         seq: tab.seq
     });
     if (undoStack.length > 60) undoStack.shift();
+}
+
+function celebrateAllDone(silent) {
+    if (reduceMotion()) return;
+    const w = window.innerWidth, h = window.innerHeight;
+    const spots = [[w * 0.18, h * 0.30], [w * 0.5, h * 0.20], [w * 0.82, h * 0.30]];
+    spots.forEach((p, i) => {
+        setTimeout(() => {
+            fxConfetti(p[0], p[1]);
+            fxFirework(p[0], p[1]);
+        }, i * 220);
+    });
+    if (!silent) setTimeout(() => toast('🎉 全部交齐，太棒啦！'), 200);
 }
 
 function setPassed(id, passed) {
@@ -1996,7 +2955,7 @@ function setPassed(id, passed) {
     const allDone = tab.students.length > 0 && tab.students.every(s => tab.passed[s.id]);
     save();
 
-    renderProgress();
+    renderProgressBar();
     renderPending();
     renderPassed();
 
@@ -2023,7 +2982,7 @@ function setPassed(id, passed) {
     if (passed) {
         spawnEffect(cx, cy, fromEl);
         playDing();
-        if (allDone) setTimeout(playFanfare, 380);
+        if (allDone) setTimeout(() => { playFanfare(); celebrateAllDone(); }, 380);
     } else {
         fxRipple(cx, cy);
     }
@@ -2375,7 +3334,7 @@ function resetAvatar() {
 }
 
 /* ==========================================================================
-   14. 记录 / 历史（支持删除） / CSV
+   14. 记录 / 历史 / CSV
    ========================================================================== */
 function buildRecordHTML(tab, date, isHistory, records) {
     let passed, pending;
@@ -2401,8 +3360,8 @@ function buildRecordHTML(tab, date, isHistory, records) {
         html += '<span class="tag">无</span>';
     } else {
         passed.sort((a, b) => {
-            const ta = isHistory ? a.time : tab.passed[a.id]?.time;
-            const tb = isHistory ? b.time : tab.passed[b.id]?.time;
+            const ta = isHistory ? a.time : (tab.passed[a.id] && tab.passed[a.id].time);
+            const tb = isHistory ? b.time : (tab.passed[b.id] && tab.passed[b.id].time);
             return (ta || 0) - (tb || 0);
         }).forEach(s => {
             const t = isHistory ? s.time : tab.passed[s.id].time;
@@ -2458,7 +3417,6 @@ function openHistory() {
         numEl.textContent = (h.passed || 0) + '/' + (h.total || 0);
 
         const delBtn = document.createElement('button');
-        delBtn.className = 'his-del';
         delBtn.innerHTML = '×';
         delBtn.style.cssText = 'width:44px;height:44px;border-radius:50%;background:#FDEDEA;color:#E5674E;font-size:22px;flex:none;display:flex;align-items:center;justify-content:center;margin-left:4px;';
         delBtn.addEventListener('click', (e) => {
@@ -2470,11 +3428,11 @@ function openHistory() {
             }
         });
 
-        row.appendChild(dateEl); 
-        row.appendChild(nameEl); 
+        row.appendChild(dateEl);
+        row.appendChild(nameEl);
         row.appendChild(numEl);
         row.appendChild(delBtn);
-        
+
         row.addEventListener('click', () => {
             $('#recordTitle').textContent = h.project + ' (' + h.date + ')';
             $('#recordBody').innerHTML = buildRecordHTML(null, h.date, true, h.records);
@@ -2554,7 +3512,7 @@ function exportCSV() {
 function openQRCode() {
     const box = $('#qrcodeBox');
     box.innerHTML = '';
-    
+
     if (location.protocol === 'file:') {
         box.innerHTML = '<p style="color:#E5674E;font-size:15px;padding:20px;">当前是本地文件打开，无法生成扫码链接。<br>请把网页挂到网上（如GitHub Pages）后使用。</p>';
         openModal('qrcodeModal');
@@ -2684,6 +3642,7 @@ elSoundBtn.addEventListener('click', () => {
 });
 
 $('#micBtn').addEventListener('click', toggleMic);
+$('#micThemeBtn').addEventListener('click', cycleWaveTheme);
 
 $('#undoBtn').addEventListener('click', undo);
 $('#saveTodayBtn').addEventListener('click', openSaveToday);
@@ -2765,6 +3724,13 @@ function tickClock() {
         String(d.getMinutes()).padStart(2, '0') + ':' +
         String(d.getSeconds()).padStart(2, '0');
 
+    const dateEl = $('#clockDate');
+    if (dateEl) {
+        const wd = ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
+        const s = (d.getMonth() + 1) + '月' + d.getDate() + '日 · ' + wd;
+        if (dateEl.textContent !== s) dateEl.textContent = s;
+    }
+
     const t = todayStr();
     if (t !== state.date) {
         state.date = t;
@@ -2772,17 +3738,21 @@ function tickClock() {
             state.tabs[k].passed = {};
             state.tabs[k].seq = 0;
         });
+        progValue = 0;
+        progSaved = false;
+        saveProg();
+        updateProgressUI();
         save(); render(); toast('新的一天，打卡记录已重置');
     }
 }
 
 function boot() {
     state = initState();
-    parseUrlParams(); // 处理扫码参数
+    parseUrlParams();
     renderSoundBtn();
     pinyinReady = detectPinyin();
     render();
-
+    initStage();
     tickClock();
     setInterval(tickClock, 1000);
 
