@@ -7,7 +7,9 @@
 <meta name="format-detection" content="telephone=no">
 <title>班级打卡 · 谁还没交一眼看清</title>
 
+<!-- 拼音库：异步加载，失败自动回退 -->
 <script async src="https://cdn.jsdelivr.net/npm/pinyin-pro@3/dist/index.js" onload="window.__pyLoadOk=true" onerror="window.__pyLoadFail=true"></script>
+<!-- 二维码生成库 -->
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
 <style>
@@ -95,6 +97,7 @@ button{
     gap: 10px;
     padding: 10px 14px 12px;
     overflow: hidden;
+    position: relative;   /* 防止绝对定位元素跑出容器 */
 }
 
 /* ---------- 3.1 顶栏 ---------- */
@@ -179,6 +182,7 @@ button{
 }
 .prog-text .num{ color: var(--pink); font-size: 24px; }
 
+/* 顶栏进度条（专属类名，避免与舞台进度条冲突） */
 .prog-bar{
     flex: 1;
     min-width: 60px;
@@ -187,8 +191,9 @@ button{
     border-radius: 99px;
     overflow: hidden;
     box-shadow: inset 0 1px 3px rgba(255,143,163,.15);
+    position: relative;
 }
-.prog-fill{
+.topbar-fill{
     height: 100%;
     width: 0%;
     border-radius: 99px;
@@ -287,10 +292,11 @@ button{
     align-content: start;
     padding: 2px;
     scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
 }
 .grid::-webkit-scrollbar{ display: none; }
 
-/* ---------- 3.3 卡片（变大版） ---------- */
+/* ---------- 3.3 卡片 ---------- */
 .card{
     position: relative;
     height: 92px;
@@ -304,8 +310,10 @@ button{
     gap: 5px;
     padding: 8px 6px;
     transition: transform .12s ease, box-shadow .16s ease;
-    will-change: transform;
     overflow: hidden;
+    /* 注意：不再无条件使用 will-change: transform，
+       避免大量卡片各自建立合成层引发渲染异常（蓝色色块遮挡） */
+    transform: translateZ(0);
 }
 .card:active{ transform: scale(.93); }
 
@@ -368,22 +376,6 @@ button{
 .passed-col .cname{ font-size: 15px; color: #3E7A55; }
 .passed-col .cname.long{ font-size: 13px; }
 
-/* 前三名奖牌 */
-.medal{
-    position: absolute;
-    top: 9px;
-    right: 6px;
-    font-size: 15px;
-    line-height: 1;
-    pointer-events: none;
-    filter: drop-shadow(0 1px 2px rgba(0,0,0,.16));
-    animation: medalIn .45s cubic-bezier(.2,1.4,.4,1);
-}
-@keyframes medalIn{
-    from{ transform: scale(0) rotate(-40deg); opacity: 0; }
-    to  { transform: scale(1) rotate(0deg); opacity: 1; }
-}
-
 body.edit-mode .pending-col .card{
     box-shadow: 0 0 0 3px var(--orange), var(--shadow);
 }
@@ -402,7 +394,7 @@ body.edit-mode .passed-col .card{
 }
 .empty-tip .big{ font-size: 40px; display: block; margin-bottom: 8px; }
 
-/* ---------- 3.4 右侧底部控制台 ---------- */
+/* ---------- 3.4 右侧底部控制台（时钟 + 音浪舞台） ---------- */
 .right-dash{
     flex: none;
     margin-top: 10px;
@@ -416,6 +408,8 @@ body.edit-mode .passed-col .card{
     border: 1px solid #E6F6EC;
     -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
+    position: relative;
+    overflow: hidden;
 }
 
 .dash-top{
@@ -489,6 +483,7 @@ body.edit-mode .passed-col .card{
     background: radial-gradient(130% 150% at 50% 115%, #FFEFF4 0%, #FFFBF7 65%, #FFFFFF 100%);
     box-shadow: inset 0 0 0 2px #FFE9EE, inset 0 -18px 26px rgba(255,143,163,.06);
     transition: box-shadow .25s ease;
+    contain: paint;
 }
 .wave-stage.live{
     box-shadow: inset 0 0 0 2px #FFC9D6, inset 0 -18px 26px rgba(255,143,163,.12);
@@ -565,32 +560,121 @@ body.edit-mode .passed-col .card{
     transform: scale(1.05);
 }
 
-/* 双模式 */
-.dual-layer{ position: absolute; inset: 0; }
-.dual-stars{ position: absolute; inset: 0; }
+/* ==========================================================
+   双模式（含：安静模式夜空背景 + 更醒目的月亮 + 星星闪烁）
+   ========================================================== */
+.dual-layer{
+    position: absolute;
+    inset: 0;
+}
+
+/* 安静模式下的“夜空”背景层：只在安静模式显示，用暗色径向渐变衬托星星与月亮 */
+.dual-layer::before{
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse at 50% 60%, rgba(20, 24, 68, 0.92) 0%, rgba(14, 16, 44, 0.64) 36%, rgba(10, 10, 30, 0) 72%),
+        radial-gradient(ellipse at 50% 55%, rgba(30, 34, 90, 0.42) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity .45s ease;
+    pointer-events: none;
+    z-index: 0;
+}
+.dual-layer.quiet::before{
+    opacity: 1;
+}
+
+/* 星星 */
+.dual-stars{
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+}
 .dual-stars i{
     position: absolute;
     width: 5px;
     height: 5px;
     border-radius: 50%;
-    background: #FFE08A;
-    box-shadow: 0 0 8px #FFE08A;
+    background: #FFE8A8;
+    box-shadow: 0 0 6px #FFE8A8, 0 0 12px rgba(255,220,120,.45);
     opacity: .15;
-    transition: opacity .25s ease, transform .25s ease;
+    transition: opacity .35s ease;
 }
+
+/* 安静模式下星星闪烁（只动 scale / 光晕，opacity 仍由 JS 控制） */
+.dual-layer.quiet .dual-stars i{
+    animation: starTwinkle 3.6s ease-in-out infinite;
+    animation-delay: var(--tw, 0s);
+}
+@keyframes starTwinkle{
+    0%, 100%{
+        transform: scale(1);
+        box-shadow: 0 0 6px #FFE8A8, 0 0 12px rgba(255,220,120,.45);
+    }
+    50%{
+        transform: scale(1.45);
+        box-shadow: 0 0 10px #FFF3C6, 0 0 22px rgba(255,225,120,.85);
+    }
+}
+
+/* 月亮 —— 更亮、更大、更有层次，背景再浅也看得清 */
 .dual-moon{
     position: absolute;
     left: 50%;
     top: 54%;
-    width: 54px;
-    height: 54px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
-    transform: translate(-50%, -50%);
-    background: radial-gradient(circle at 35% 32%, #fffdf0, #f2e2a0);
-    box-shadow: 0 0 40px rgba(255,238,176,.5);
-    opacity: .1;
-    transition: opacity .25s ease;
+    transform: translate(-50%, -50%) scale(var(--moon-scale, 1));
+    background:
+        radial-gradient(circle at 30% 28%, rgba(255,255,255,.62) 0%, rgba(255,255,255,0) 38%),
+        radial-gradient(circle at 42% 64%, rgba(190,130,40,.32) 7%, rgba(190,130,40,0) 8%),
+        radial-gradient(circle at 62% 38%, rgba(190,130,40,.24) 5%, rgba(190,130,40,0) 6%),
+        radial-gradient(circle at 55% 74%, rgba(190,130,40,.18) 4%, rgba(190,130,40,0) 5%),
+        radial-gradient(circle at 74% 58%, rgba(190,130,40,.16) 3.5%, rgba(190,130,40,0) 4.5%),
+        radial-gradient(circle at 38% 38%, #FFFCE4 0%, #FFE68C 32%, #FFC849 66%, #EE9E22 100%);
+    box-shadow:
+        0 0 0 1px rgba(255,222,130,.55),
+        0 0 14px rgba(255,214,100,.9),
+        0 0 30px rgba(255,192,70,.62),
+        0 0 60px rgba(255,172,50,.4),
+        0 0 100px rgba(255,150,40,.2),
+        inset -8px -8px 18px rgba(200,120,20,.32),
+        inset 4px 4px 14px rgba(255,255,205,.42);
+    opacity: .08;
+    transition: opacity .35s ease, transform .35s ease;
+    z-index: 3;
+    will-change: opacity, transform;
 }
+
+/* 安静模式下月亮呼吸发光 */
+.dual-layer.quiet .dual-moon{
+    animation: moonBreath 3.4s ease-in-out infinite;
+}
+@keyframes moonBreath{
+    0%, 100%{
+        box-shadow:
+            0 0 0 1px rgba(255,222,130,.55),
+            0 0 14px rgba(255,214,100,.9),
+            0 0 30px rgba(255,192,70,.62),
+            0 0 60px rgba(255,172,50,.4),
+            0 0 100px rgba(255,150,40,.2),
+            inset -8px -8px 18px rgba(200,120,20,.32),
+            inset 4px 4px 14px rgba(255,255,205,.42);
+    }
+    50%{
+        box-shadow:
+            0 0 0 1px rgba(255,222,130,.7),
+            0 0 20px rgba(255,214,100,1),
+            0 0 44px rgba(255,192,70,.85),
+            0 0 84px rgba(255,172,50,.55),
+            0 0 140px rgba(255,150,40,.3),
+            inset -8px -8px 18px rgba(200,120,20,.32),
+            inset 4px 4px 14px rgba(255,255,205,.42);
+    }
+}
+
 .dual-val{
     position: absolute;
     left: 0;
@@ -646,7 +730,8 @@ body.edit-mode .passed-col .card{
     overflow: hidden;
     box-shadow: inset 0 1px 3px rgba(0,0,0,.06);
 }
-.prog-fill{
+/* 注意：这里使用 swim-fill，避免与顶栏进度条 .prog-fill 冲突 */
+.swim-fill{
     position: absolute;
     left: 0;
     top: 0;
@@ -674,22 +759,120 @@ body.edit-mode .passed-col .card{
     opacity: .8;
     z-index: 2;
 }
-.prog-reset{
+
+/* 倒计时工具栏（模式切换 + 时间设定 + 重置） */
+.prog-toolbar{
     position: absolute;
+    left: 10px;
     right: 10px;
     top: 8px;
-    width: 30px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    z-index: 8;
+    pointer-events: none;
+}
+.prog-toolbar > *{ pointer-events: auto; }
+
+.pm-switch{
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    height: 26px;
+    border-radius: 99px;
+    background: rgba(255,255,255,.82);
+    box-shadow: 0 2px 8px rgba(140,110,90,.10);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+}
+.pm-btn{
+    width: 28px;
+    height: 22px;
+    border-radius: 99px;
+    font-size: 13px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: .55;
+    transition: background .15s ease, opacity .15s ease;
+}
+.pm-btn.active{
+    background: linear-gradient(135deg, #FF9FAE 0%, #FF8FA3 100%);
+    opacity: 1;
+    box-shadow: 0 2px 6px rgba(255,143,163,.4);
+}
+
+.prog-setter{
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    height: 26px;
+    padding: 0 3px 0 8px;
+    border-radius: 99px;
+    background: rgba(255,255,255,.82);
+    box-shadow: 0 2px 8px rgba(140,110,90,.10);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    font-size: 12px;
+    font-weight: 800;
+    color: #C97B4E;
+}
+.prog-toolbar.voice .prog-setter{
+    display: none;
+}
+.prog-setter *{ pointer-events: auto; }
+.prog-setter input{
+    width: 42px;
+    height: 19px;
+    padding: 0;
+    border: none;
+    outline: none;
+    border-radius: 6px;
+    background: #FFF3E6;
+    color: #C97B4E;
+    font-size: 12px;
+    font-weight: 800;
+    text-align: center;
+    -moz-appearance: textfield;
+}
+.prog-setter input::-webkit-outer-spin-button,
+.prog-setter input::-webkit-inner-spin-button{
+    -webkit-appearance: none;
+    margin: 0;
+}
+.prog-setter .ps-unit{
+    font-size: 11px;
+    opacity: .8;
+}
+.prog-setter button{
+    height: 19px;
+    padding: 0 9px;
+    border-radius: 99px;
+    background: linear-gradient(135deg, #FF9FAE 0%, #FF8FA3 100%);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.prog-setter button:active{ transform: scale(.94); }
+
+.prog-reset{
+    margin-left: auto;
+    width: 26px;
     height: 26px;
     border-radius: 99px;
     font-size: 14px;
-    background: rgba(255,255,255,.78);
+    background: rgba(255,255,255,.82);
     color: #8A7568;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 8;
     box-shadow: 0 2px 8px rgba(140,110,90,.10);
-    pointer-events: auto;
 }
 .prog-reset:active{ transform: scale(.92); }
 
@@ -714,6 +897,8 @@ body.edit-mode .passed-col .card{
     display: flex;
     align-items: center;
     gap: 8px;
+    position: relative;
+    z-index: 5;
 }
 
 .tb{
@@ -752,6 +937,7 @@ body.edit-mode .passed-col .card{
     pointer-events: none;
     z-index: 9999;
     overflow: hidden;
+    contain: strict;
 }
 
 .fx-item{
@@ -1229,7 +1415,6 @@ body.edit-mode .passed-col .card{
     .passed-col .card{ height: 70px; }
     .passed-col .avatar{ width: 26px; height: 26px; font-size: 14px; }
     .passed-col .cname{ font-size: 13px; }
-    .medal{ font-size: 13px; top: 7px; right: 5px; }
 
     .right-dash{ padding: 8px; gap: 6px; border-radius: 16px; }
     .dash-top{ gap: 6px; }
@@ -1241,13 +1426,20 @@ body.edit-mode .passed-col .card{
     .mode-picker{ bottom: 5px; padding: 3px; gap: 2px; }
     .mode-btn{ width: 26px; height: 23px; font-size: 12px; }
     .dual-val{ font-size: 16px; top: 6px; }
-    .dual-moon{ width: 46px; height: 46px; }
+    .dual-moon{ width: 50px; height: 50px; }
     .dual-sub{ right: 8px; top: 6px; padding: 2px; }
     .dual-sub button{ width: 26px; height: 23px; font-size: 12px; }
     .prog-track{ bottom: 34px; height: 34px; left: 10px; right: 10px; }
     .prog-swimmer{ font-size: 22px; }
     .prog-goal{ font-size: 20px; }
-    .prog-reset{ top: 6px; right: 8px; width: 26px; height: 23px; font-size: 12px; }
+    .prog-toolbar{ left: 8px; right: 8px; top: 6px; height: 23px; gap: 4px; }
+    .pm-switch{ height: 23px; padding: 2px; }
+    .pm-btn{ width: 24px; height: 19px; font-size: 11px; }
+    .prog-setter{ height: 23px; padding: 0 3px 0 6px; font-size: 11px; gap: 3px; }
+    .prog-setter input{ width: 34px; height: 17px; font-size: 11px; }
+    .prog-setter .ps-unit{ font-size: 10px; }
+    .prog-setter button{ height: 17px; padding: 0 7px; font-size: 10px; }
+    .prog-reset{ width: 23px; height: 23px; font-size: 12px; }
     .balloon{ font-size: 18px; }
 
     .tb{ height: 46px; padding: 0 14px; font-size: 15px; flex: 1; }
@@ -1287,7 +1479,7 @@ body.edit-mode .passed-col .card{
 
         <div class="progress-wrap">
             <div class="prog-text" id="progText">已交 <span class="num">0</span> / 0</div>
-            <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+            <div class="prog-bar"><div class="topbar-fill" id="progFill"></div></div>
         </div>
 
         <button class="icon-btn" id="soundBtn" title="声音开关">🔊</button>
@@ -1338,14 +1530,25 @@ body.edit-mode .passed-col .card{
                             </div>
                         </div>
 
-                        <!-- 声控进度 -->
+                        <!-- 鲸鱼进度（时间倒计时 / 音控倒计时） -->
                         <div class="prog-layer" id="progLayer" style="display:none;">
                             <div class="prog-track">
-                                <div class="prog-fill" id="progFillBar"></div>
+                                <div class="swim-fill" id="progFillBar"></div>
                                 <div class="prog-swimmer" id="progSwimmer">🐋</div>
                                 <div class="prog-goal">🏝</div>
                             </div>
-                            <button class="prog-reset" id="progReset" title="重置进度">↺</button>
+                            <div class="prog-toolbar" id="progToolbar">
+                                <div class="pm-switch" id="progModeSwitch">
+                                    <button class="pm-btn active" data-pmode="time" title="时间倒计时">⏳</button>
+                                    <button class="pm-btn" data-pmode="voice" title="音控倒计时">🎤</button>
+                                </div>
+                                <div class="prog-setter" id="progSetter">
+                                    <input type="number" id="progMinutes" min="0.5" max="180" step="0.5" value="5" inputmode="decimal" aria-label="倒计时分钟数">
+                                    <span class="ps-unit">分</span>
+                                    <button id="progApply" title="按设定分钟开始倒计时">设定</button>
+                                </div>
+                                <button class="prog-reset" id="progReset" title="重新计时">↺</button>
+                            </div>
                         </div>
 
                         <!-- 气球 -->
@@ -1357,7 +1560,7 @@ body.edit-mode .passed-col .card{
                     <div class="mode-picker" id="modePicker">
                         <button class="mode-btn active" data-mode="wave" title="音浪">🌊</button>
                         <button class="mode-btn" data-mode="dual" title="双模式">🌙</button>
-                        <button class="mode-btn" data-mode="progress" title="声控进度">🐋</button>
+                        <button class="mode-btn" data-mode="progress" title="鲸鱼倒计时">🐋</button>
                         <button class="mode-btn" data-mode="firework" title="烟花">🎆</button>
                         <button class="mode-btn" data-mode="balloon" title="气球">🎈</button>
                     </div>
@@ -1670,6 +1873,20 @@ function candyOf(id) {
     return CANDY[(Math.max(1, id) - 1) % CANDY.length];
 }
 
+/* 秒 -> mm:ss */
+function fmtClock(sec) {
+    sec = Math.max(0, Math.ceil(sec));
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+
+/* 秒 -> 友好的分钟文本 */
+function minutesText(totalSec) {
+    const m = totalSec / 60;
+    return Number.isInteger(m) ? String(m) : String(Math.round(m * 10) / 10);
+}
+
 /* ==========================================================================
    3. 状态初始化 / 持久化
    ========================================================================== */
@@ -1813,12 +2030,13 @@ function sortPending(tab) {
 }
 
 /* ==========================================================================
-   6. 点击特效合集
+   6. 点击特效合集（共 14 种）
    ========================================================================== */
 const fxLayer = document.createElement('div');
 fxLayer.id = 'fxLayer';
 document.body.appendChild(fxLayer);
 
+// 1. 星星四散
 function fxStars(x, y) {
     const n = 9;
     for (let i = 0; i < n; i++) {
@@ -1837,6 +2055,7 @@ function fxStars(x, y) {
     }
 }
 
+// 2. 爱心上飘
 function fxHearts(x, y) {
     for (let i = 0; i < 6; i++) {
         const el = document.createElement('div');
@@ -1854,6 +2073,7 @@ function fxHearts(x, y) {
     }
 }
 
+// 3. 彩纸屑
 function fxConfetti(x, y) {
     const colors = ['#FF8FA3','#FFB86B','#FFD93D','#7ED9A0','#6EC6FF','#B39DDB'];
     for (let i = 0; i < 18; i++) {
@@ -1874,6 +2094,7 @@ function fxConfetti(x, y) {
     }
 }
 
+// 4. 圆环涟漪
 function fxRipple(x, y) {
     const colors = ['#FF8FA3', '#FFB86B', '#7ED9A0'];
     for (let i = 0; i < 3; i++) {
@@ -1891,6 +2112,7 @@ function fxRipple(x, y) {
     }
 }
 
+// 5. 闪光点
 function fxSparkles(x, y) {
     for (let i = 0; i < 11; i++) {
         const el = document.createElement('div');
@@ -1907,6 +2129,7 @@ function fxSparkles(x, y) {
     }
 }
 
+// 6. 卡片弹跳
 function fxBounce(x, y, cardEl) {
     if (!cardEl) return;
     cardEl.animate([
@@ -1917,6 +2140,7 @@ function fxBounce(x, y, cardEl) {
     ], { duration: 430, easing: 'ease-out' });
 }
 
+// 7. 彩虹光环
 function fxRainbow(x, y) {
     for (let i = 0; i < 2; i++) {
         const el = document.createElement('div');
@@ -1934,6 +2158,7 @@ function fxRainbow(x, y) {
     }
 }
 
+// 8. 大表情弹出
 function fxEmojiPop(x, y) {
     const emojis = ['😍', '🎉', '👍', '✨', '🌟', '🥳', '💯'];
     const el = document.createElement('div');
@@ -1950,6 +2175,7 @@ function fxEmojiPop(x, y) {
     ], { duration: 900, easing: 'ease-out' }).onfinish = () => el.remove();
 }
 
+// 9. 烟花
 function fxFirework(x, y) {
     for(let i=0; i<25; i++) {
         const el = document.createElement('div');
@@ -1969,6 +2195,7 @@ function fxFirework(x, y) {
     }
 }
 
+// 10. 天降表情
 function fxEmojiRain(x, y) {
     const emojis = ['🎈','🍬','🌈','🌟','🎁','🍭'];
     for(let i=0; i<12; i++) {
@@ -1986,6 +2213,7 @@ function fxEmojiRain(x, y) {
     }
 }
 
+// 11. 夸奖文字
 function fxTextPop(x, y) {
     const words = ['太棒了', '真厉害', '666', '满分', '优秀', '漂亮'];
     const el = document.createElement('div');
@@ -2004,6 +2232,7 @@ function fxTextPop(x, y) {
     ], { duration: 1000, easing: 'ease-out' }).onfinish = () => el.remove();
 }
 
+// 12. 泡泡上升
 function fxBubble(x, y) {
     for(let i=0; i<8; i++) {
         const el = document.createElement('div');
@@ -2023,6 +2252,7 @@ function fxBubble(x, y) {
     }
 }
 
+// 13. 闪电
 function fxLightning(x, y) {
     const el = document.createElement('div');
     el.className = 'fx-item';
@@ -2038,6 +2268,7 @@ function fxLightning(x, y) {
     ], { duration: 600, easing: 'ease-in-out' }).onfinish = () => el.remove();
 }
 
+// 14. 螺旋飞出
 function fxSpiral(x, y) {
     for(let i=0; i<6; i++) {
         const el = document.createElement('div');
@@ -2069,8 +2300,30 @@ function spawnEffect(x, y, cardEl) {
     } catch (e) {}
 }
 
+/* 兜底清理：防止任何特效元素因动画中断而永久残留（会造成大色块遮挡） */
+function startFxJanitor() {
+    setInterval(function () {
+        if (!fxLayer) return;
+        const now = Date.now();
+        const kids = fxLayer.children;
+        for (let i = kids.length - 1; i >= 0; i--) {
+            const el = kids[i];
+            if (!el.__born) {
+                el.__born = now;
+            } else if (now - el.__born > 5000) {
+                el.remove();
+            }
+        }
+        // 数量硬上限，超出时丢弃最早的
+        const over = fxLayer.children.length - 220;
+        for (let j = 0; j < over; j++) {
+            if (fxLayer.firstElementChild) fxLayer.firstElementChild.remove();
+        }
+    }, 1500);
+}
+
 /* ==========================================================================
-   7. 舞台：音浪 / 双模式 / 声控进度 / 烟花 / 气球
+   7. 舞台：音浪 / 双模式 / 鲸鱼倒计时（时间 / 音控） / 烟花 / 气球
    ========================================================================== */
 const MAX_BARS = 48;
 const WAVE_THEMES = [
@@ -2104,14 +2357,27 @@ let badgeTextCache = '';
 /* 舞台模式 */
 let stageMode = 'wave';
 let dualMode = 'read';
-let progValue = 0;
-let progSaved = false;
+
+/* --- 鲸鱼倒计时（同时支持「时间倒计时」和「音控倒计时」两种模式） --- */
+const PROG_DEFAULT_SEC = 300;   // 默认 5 分钟
+const PROG_MIN_SEC     = 30;    // 最少 30 秒
+const PROG_MAX_SEC     = 10800; // 最多 180 分钟
+
+let progMode      = 'time';          // 'time' | 'voice'
+let progDuration  = PROG_DEFAULT_SEC; // 时间模式：设定总时长（秒）
+let progRemaining = PROG_DEFAULT_SEC; // 时间模式：剩余时长（秒）
+let progEndAt     = 0;                // 时间模式：运行中结束时间戳（ms）
+let progRunning   = false;            // 时间模式：是否正在倒计时
+let progVoiceValue = 0;               // 音控模式：进度 0~100
+let progSaved     = false;            // 是否已完成并自动存档（两种模式共用）
+let progValue     = 0;                // 统一显示进度 0~100
 let progSaveTimer = null;
 
 /* DOM 引用 */
 let waveStage, dualLayer, progLayer, balloonLayer;
 let dualStarsBox, dualMoonEl, dualValEl;
-let progFillEl, progSwimmerEl;
+let progFillEl, progSwimmerEl, progMinutesInput, progToolbar;
+let waveBadgeEl = null;
 let dualStarEls = [];
 let modeBtns = [];
 
@@ -2145,25 +2411,62 @@ function themeColor(theme, t) {
     return mixHex(cols[i], cols[i + 1], p - i);
 }
 
-/* --- 进度持久化 --- */
+/* --- 倒计时进度持久化 --- */
 function loadProg() {
     try {
         const raw = localStorage.getItem(PROG_KEY);
         if (!raw) return;
         const o = JSON.parse(raw);
-        if (o.date === todayStr()) {
-            progValue = Math.max(0, Math.min(100, Number(o.value) || 0));
-            progSaved = !!o.saved;
+        if (!o || o.date !== todayStr()) return;
+
+        // 旧版（纯声控，无 duration）数据忽略，直接使用默认值
+        if (typeof o.duration !== 'number' || o.duration <= 0) return;
+
+        progMode = (o.mode === 'voice') ? 'voice' : 'time';
+        progDuration = Math.max(PROG_MIN_SEC, Math.min(PROG_MAX_SEC, o.duration));
+        progSaved = !!o.saved;
+        progVoiceValue = (typeof o.voiceValue === 'number')
+            ? Math.max(0, Math.min(100, o.voiceValue)) : 0;
+
+        if (progMode === 'time') {
+            if (o.running && typeof o.endAt === 'number') {
+                progEndAt = o.endAt;
+                progRemaining = Math.max(0, (progEndAt - Date.now()) / 1000);
+                progRunning = progRemaining > 0;
+                if (!progRunning) {
+                    progRemaining = 0;
+                    progSaved = true;
+                }
+            } else {
+                progRunning = false;
+                progEndAt = 0;
+                progRemaining = (typeof o.remaining === 'number')
+                    ? Math.max(0, Math.min(o.remaining, progDuration))
+                    : progDuration;
+            }
+        } else {
+            progRunning = false;
+            progEndAt = 0;
+            progRemaining = progDuration;
         }
     } catch (e) {}
 }
+
 function saveProg() {
     try {
         localStorage.setItem(PROG_KEY, JSON.stringify({
-            date: todayStr(), value: progValue, saved: progSaved
+            date: todayStr(),
+            mode: progMode,
+            duration: progDuration,
+            remaining: progRemaining,
+            running: progRunning,
+            endAt: progEndAt,
+            saved: progSaved,
+            voiceValue: progVoiceValue
         }));
     } catch (e) {}
 }
+
 function throttledSaveProg() {
     if (progSaveTimer) return;
     progSaveTimer = setTimeout(() => {
@@ -2172,9 +2475,19 @@ function throttledSaveProg() {
     }, 2000);
 }
 
+function computeProgValue() {
+    if (progMode === 'time') {
+        return progDuration > 0
+            ? Math.max(0, Math.min(100, (1 - progRemaining / progDuration) * 100))
+            : 0;
+    }
+    return progVoiceValue;
+}
+
 /* --- 初始化舞台 --- */
 function initStage() {
     waveCanvas = $('#waveCanvas');
+    if (!waveCanvas) return;
     waveCtx = waveCanvas.getContext('2d');
     waveStage = $('#waveStage');
     dualLayer = $('#dualLayer');
@@ -2185,6 +2498,9 @@ function initStage() {
     dualValEl = $('#dualVal');
     progFillEl = $('#progFillBar');
     progSwimmerEl = $('#progSwimmer');
+    progMinutesInput = $('#progMinutes');
+    progToolbar = $('#progToolbar');
+    waveBadgeEl = $('#waveBadge');
     modeBtns = $$('.mode-btn');
 
     resizeWave();
@@ -2195,7 +2511,11 @@ function initStage() {
 
     buildDualStars();
     loadProg();
+
+    if (progMinutesInput) progMinutesInput.value = minutesText(progDuration);
+    progValue = computeProgValue();
     updateProgressUI();
+    updateProgModeUI();
 
     bindStageEvents();
     startStageLoop();
@@ -2209,6 +2529,8 @@ function buildDualStars() {
         const s = document.createElement('i');
         s.style.left = (Math.random() * 92 + 4) + '%';
         s.style.top = (Math.random() * 78 + 8) + '%';
+        // 给每颗星星一个独立的闪烁延时，让夜空更自然
+        s.style.setProperty('--tw', (Math.random() * 3.5).toFixed(2) + 's');
         dualStarsBox.appendChild(s);
         dualStarEls.push(s);
     }
@@ -2223,16 +2545,71 @@ function bindStageEvents() {
             dualMode = btn.dataset.dual;
             $$('.dual-sub button').forEach(b => b.classList.toggle('active', b === btn));
             badgeTextCache = '';
+            // 切换双模式时同步夜空背景类
+            if (dualLayer) dualLayer.classList.toggle('quiet', dualMode === 'quiet');
+            if (dualMode === 'quiet') {
+                // 清空星星的内联 transform，让闪烁动画完全接管
+                dualStarEls.forEach(s => { s.style.transform = ''; });
+            }
         });
     });
     const resetBtn = $('#progReset');
     if (resetBtn) resetBtn.addEventListener('click', resetProgress);
+
+    /* 时间 / 音控 模式切换 */
+    $$('.pm-btn').forEach(btn => {
+        btn.addEventListener('click', () => setProgMode(btn.dataset.pmode));
+    });
+
+    /* 倒计时设定 */
+    const applyBtn = $('#progApply');
+    if (applyBtn) applyBtn.addEventListener('click', applyProgMinutes);
+    if (progMinutesInput) {
+        progMinutesInput.addEventListener('change', applyProgMinutes);
+        progMinutesInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); applyProgMinutes(); }
+            e.stopPropagation();
+        });
+    }
+}
+
+/* 切换「时间倒计时 / 音控倒计时」 */
+function setProgMode(mode) {
+    if (progMode === mode) return;
+    progMode = mode;
+    updateProgModeUI();
+
+    if (mode === 'time') {
+        // 进入时间模式：如果已经完成，则重置并重新开始
+        startProgress(progDuration);
+        toast('⏳ 已切换到时间倒计时');
+    } else {
+        // 进入音控模式：重置音控进度
+        progVoiceValue = 0;
+        progValue = 0;
+        progSaved = false;
+        progRunning = false;
+        progEndAt = 0;
+        progRemaining = progDuration;
+        updateProgressUI();
+        saveProg();
+        toast('🎤 已切换到音控倒计时');
+    }
+    badgeTextCache = '';
+}
+
+function updateProgModeUI() {
+    if (progToolbar) progToolbar.classList.toggle('voice', progMode === 'voice');
+    $$('.pm-btn').forEach(b => b.classList.toggle('active', b.dataset.pmode === progMode));
+    if (progMinutesInput && progMode === 'time' && document.activeElement !== progMinutesInput) {
+        progMinutesInput.value = minutesText(progDuration);
+    }
 }
 
 function setStageMode(mode) {
     if (stageMode === mode) return;
     stageMode = mode;
-    waveStage.dataset.mode = mode;
+    if (waveStage) waveStage.dataset.mode = mode;
 
     if (waveCtx) waveCtx.clearRect(0, 0, waveW, waveH);
     fwParticles.length = 0;
@@ -2249,12 +2626,21 @@ function setStageMode(mode) {
 
     modeBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
     badgeTextCache = '';
+
+    if (mode === 'progress') {
+        if (progMode === 'time') {
+            if (!progRunning && !progSaved) {
+                startProgress(progDuration);
+            }
+        }
+        updateProgressUI();
+    }
+
     updateWaveBadge();
-    if (mode === 'progress') updateProgressUI();
 }
 
 function resizeWave() {
-    if (!waveCanvas) return;
+    if (!waveCanvas || !waveStage) return;
     const rect = waveCanvas.getBoundingClientRect();
     waveDPR = Math.min(window.devicePixelRatio || 1, 2);
     waveW = Math.max(1, Math.round(rect.width));
@@ -2296,7 +2682,7 @@ function stageLoop(now) {
     } else if (stageMode === 'dual') {
         renderDual();
     } else if (stageMode === 'progress') {
-        renderProgress(dt);
+        renderStageProgress(dt);
     } else if (stageMode === 'balloon') {
         renderBalloon(now, dt);
     }
@@ -2505,27 +2891,70 @@ function renderDual() {
         dualMoonEl.style.opacity = 0.06;
         dualValEl.textContent = Math.round(level * 100) + '%';
     } else {
-        dualStarEls.forEach(s => { s.style.opacity = 0.15; s.style.transform = 'scale(1)'; });
         const q = 1 - level;
-        dualMoonEl.style.opacity = (0.2 + 0.8 * q).toFixed(2);
+        // 星星越安静越亮（再配合 CSS 闪烁动画）
+        const starOp = (0.32 + 0.45 * q).toFixed(2);
+        dualStarEls.forEach(s => { s.style.opacity = starOp; });
+        // 月亮：越安静越亮、越大（大小通过 CSS 变量控制，不影响动画）
+        dualMoonEl.style.opacity = (0.35 + 0.65 * q).toFixed(2);
+        dualMoonEl.style.setProperty('--moon-scale', (1 + q * 0.12).toFixed(3));
         dualValEl.textContent = '安静 ' + Math.round(q * 100) + '%';
     }
 }
 
-/* --- 声控进度 --- */
-function renderProgress(dt) {
-    const level = micLevel;
+/* --- 鲸鱼进度：时间倒计时 / 音控倒计时 --- */
+function startProgress(seconds) {
+    progDuration = Math.max(PROG_MIN_SEC, Math.min(PROG_MAX_SEC, Math.round(seconds)));
+    progRemaining = progDuration;
+    progEndAt = Date.now() + progDuration * 1000;
+    progRunning = true;
+    progSaved = false;
+    progValue = 0;
+    saveProg();
+    updateProgressUI();
+    if (progMinutesInput && document.activeElement !== progMinutesInput) {
+        progMinutesInput.value = minutesText(progDuration);
+    }
+    badgeTextCache = '';
+}
 
-    if (!progSaved && level > 0.08) {
-        const k = 0.005;
-        progValue = Math.min(100, progValue + level * dt * k);
-        if (progValue >= 100) {
-            progValue = 100;
-            progSaved = true;
-            saveProg();
-            onProgressComplete();
+function renderStageProgress(dt) {
+    if (progMode === 'time') {
+        /* 时间倒计时 */
+        if (progRunning) {
+            progRemaining = Math.max(0, (progEndAt - Date.now()) / 1000);
+            if (progRemaining <= 0) {
+                progRemaining = 0;
+                progRunning = false;
+                progSaved = true;
+                progValue = 100;
+                saveProg();
+                updateProgressUI();
+                onProgressComplete();
+                return;
+            }
+            throttledSaveProg();
         }
-        throttledSaveProg();
+        progValue = progDuration > 0
+            ? Math.max(0, Math.min(100, (1 - progRemaining / progDuration) * 100))
+            : 0;
+    } else {
+        /* 音控倒计时 */
+        if (!progSaved && micLevel > 0.08) {
+            const k = 0.005;
+            progVoiceValue = Math.min(100, progVoiceValue + micLevel * dt * k);
+            if (progVoiceValue >= 100) {
+                progVoiceValue = 100;
+                progSaved = true;
+                progValue = 100;
+                saveProg();
+                updateProgressUI();
+                onProgressComplete();
+                return;
+            }
+            throttledSaveProg();
+        }
+        progValue = progVoiceValue;
     }
 
     updateProgressUI();
@@ -2533,12 +2962,15 @@ function renderProgress(dt) {
 
 function updateProgressUI() {
     if (!progFillEl || !progSwimmerEl) return;
-    progFillEl.style.width = progValue + '%';
-    progSwimmerEl.style.left = Math.max(3, Math.min(97, progValue)) + '%';
+    const w = Math.max(0, Math.min(100, progValue));
+    const wStr = w.toFixed(1) + '%';
+    if (progFillEl.style.width !== wStr) progFillEl.style.width = wStr;
+    const posStr = Math.max(3, Math.min(97, w)).toFixed(1) + '%';
+    if (progSwimmerEl.style.left !== posStr) progSwimmerEl.style.left = posStr;
 }
 
 function onProgressComplete() {
-    toast('🏝 声浪进度已满，已自动存入今日记录');
+    toast('🏝 鲸鱼到达终点，已自动存入今日记录');
     const tab = currentTab();
     if (!tab.students.length) return;
     const records = tab.students.map(s => ({
@@ -2559,11 +2991,49 @@ function onProgressComplete() {
 }
 
 function resetProgress() {
-    progValue = 0;
-    progSaved = false;
-    saveProg();
-    updateProgressUI();
-    toast('声浪进度已重置');
+    if (progMode === 'time') {
+        progRemaining = progDuration;
+        progEndAt = Date.now() + progDuration * 1000;
+        progRunning = true;
+        progSaved = false;
+        progValue = 0;
+        saveProg();
+        updateProgressUI();
+        badgeTextCache = '';
+        toast('⏳ 倒计时已重新开始：' + minutesText(progDuration) + ' 分钟');
+    } else {
+        progVoiceValue = 0;
+        progValue = 0;
+        progSaved = false;
+        saveProg();
+        updateProgressUI();
+        badgeTextCache = '';
+        toast('🎤 音控进度已重置，喊起来吧！');
+    }
+}
+
+function applyProgMinutes() {
+    if (!progMinutesInput) return;
+    let m = parseFloat(progMinutesInput.value);
+    if (!isFinite(m) || m <= 0) {
+        toast('请输入大于 0 的分钟数');
+        progMinutesInput.value = minutesText(progDuration);
+        return;
+    }
+    m = Math.min(PROG_MAX_SEC / 60, Math.max(PROG_MIN_SEC / 60, m));
+    progMinutesInput.value = String(Math.round(m * 10) / 10);
+
+    /* 设定后切到时间模式 */
+    if (progMode !== 'time') {
+        progMode = 'time';
+        updateProgModeUI();
+    }
+    startProgress(Math.round(m * 60));
+
+    if (stageMode !== 'progress') {
+        setStageMode('progress');
+    }
+    toast('⏳ 已设定倒计时 ' + (Math.round(m * 10) / 10) + ' 分钟，鲸鱼出发啦');
 }
 
 /* --- 烟花 --- */
@@ -2665,15 +3135,24 @@ function renderBalloon(now, dt) {
 
 /* --- 徽章文字 --- */
 function updateWaveBadge() {
-    const el = $('#waveBadge');
-    if (!el) return;
+    if (!waveBadgeEl) return;
     let txt = '';
 
     if (stageMode === 'progress') {
-        if (progSaved) txt = '🏝 已到达！';
-        else {
+        if (progSaved) {
+            txt = '🏝 已到达！';
+        } else if (progMode === 'time') {
+            if (progRunning) {
+                txt = '⏳ 剩余 ' + fmtClock(progRemaining);
+            } else {
+                txt = '⏳ 点击 ↺ 开始 · ' + minutesText(progDuration) + ' 分钟';
+            }
+        } else {
+            /* 音控模式：按原逻辑给出大致剩余时间 */
             const remainMin = Math.max(0, Math.ceil((100 - progValue) / 100 * 20));
-            txt = progValue >= 99 ? '🏝 即将到达' : `进度 ${Math.round(progValue)}% · 约剩 ${remainMin} 分钟`;
+            txt = progValue >= 99
+                ? '🏝 即将到达'
+                : `🎤 音控 ${Math.round(progValue)}% · 约剩 ${remainMin} 分钟`;
         }
     } else if (stageMode === 'dual') {
         txt = dualMode === 'read' ? '📣 读书模式' : '🌙 安静模式';
@@ -2697,7 +3176,7 @@ function updateWaveBadge() {
 
     if (txt !== badgeTextCache) {
         badgeTextCache = txt;
-        el.textContent = txt;
+        waveBadgeEl.textContent = txt;
     }
 }
 
@@ -2753,8 +3232,7 @@ function stopMic() {
     const btn = $('#micBtn');
     if (btn) { btn.textContent = '🎤'; btn.classList.remove('active'); }
     if (waveStage) waveStage.classList.remove('live');
-    const badge = $('#waveBadge');
-    if (badge) { badge.textContent = '🎤 点击开启音浪'; badgeTextCache = ''; }
+    if (waveBadgeEl) { waveBadgeEl.textContent = '🎤 点击开启音浪'; badgeTextCache = ''; }
 }
 
 function cycleWaveTheme() {
@@ -2779,7 +3257,7 @@ function renderTabs() {
     elTabs.appendChild(frag);
 }
 
-function renderProgressBar() {
+function renderProgress() {
     const tab = currentTab();
     const total = tab.students.length;
     const done = tab.students.filter(s => tab.passed[s.id]).length;
@@ -2832,18 +3310,6 @@ function makeCard(student, isPassed) {
     nm.className = 'cname' + (student.name.length >= 5 ? ' long' : '');
     nm.textContent = student.name;
     btn.appendChild(nm);
-
-    if (isPassed) {
-        const tab = currentTab();
-        const rec = tab.passed[student.id];
-        const seq = rec && rec.seq;
-        if (seq >= 1 && seq <= 3) {
-            const medal = document.createElement('span');
-            medal.className = 'medal';
-            medal.textContent = ['🥇', '🥈', '🥉'][seq - 1];
-            btn.appendChild(medal);
-        }
-    }
 
     btn.addEventListener('click', () => {
         if (editMode) openAvatarModal(student.id);
@@ -2902,7 +3368,7 @@ function renderPassed() {
 
 function render() {
     renderTabs();
-    renderProgressBar();
+    renderProgress();
     renderPending();
     renderPassed();
 }
@@ -2955,7 +3421,7 @@ function setPassed(id, passed) {
     const allDone = tab.students.length > 0 && tab.students.every(s => tab.passed[s.id]);
     save();
 
-    renderProgressBar();
+    renderProgress();
     renderPending();
     renderPassed();
 
@@ -3711,9 +4177,12 @@ document.addEventListener('keydown', e => {
 });
 
 document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') save();
+    if (document.visibilityState === 'hidden') {
+        save();
+        saveProg();
+    }
 });
-window.addEventListener('beforeunload', save);
+window.addEventListener('beforeunload', function () { save(); saveProg(); });
 
 /* ==========================================================================
    19. 时钟与启动
@@ -3738,21 +4207,31 @@ function tickClock() {
             state.tabs[k].passed = {};
             state.tabs[k].seq = 0;
         });
-        progValue = 0;
+
+        /* 跨天重置鲸鱼进度（两种模式都重置，保留当前模式选择） */
+        progRemaining = progDuration;
+        progRunning = false;
+        progEndAt = 0;
         progSaved = false;
+        progValue = 0;
+        progVoiceValue = 0;
         saveProg();
         updateProgressUI();
+
         save(); render(); toast('新的一天，打卡记录已重置');
     }
 }
 
 function boot() {
     state = initState();
-    parseUrlParams();
+    parseUrlParams(); // 处理扫码参数
     renderSoundBtn();
     pinyinReady = detectPinyin();
     render();
+
     initStage();
+    startFxJanitor();
+
     tickClock();
     setInterval(tickClock, 1000);
 
