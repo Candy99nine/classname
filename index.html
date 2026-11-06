@@ -97,7 +97,7 @@ button{
     gap: 10px;
     padding: 10px 14px 12px;
     overflow: hidden;
-    position: relative;   /* 防止绝对定位元素跑出容器 */
+    position: relative;
 }
 
 /* ---------- 3.1 顶栏 ---------- */
@@ -182,7 +182,6 @@ button{
 }
 .prog-text .num{ color: var(--pink); font-size: 24px; }
 
-/* 顶栏进度条（专属类名，避免与舞台进度条冲突） */
 .prog-bar{
     flex: 1;
     min-width: 60px;
@@ -255,6 +254,7 @@ button{
     padding: 2px 6px 8px;
     margin-bottom: 6px;
     border-bottom: 2px dashed;
+    gap: 8px;
 }
 .pending-col .col-head{ border-color: #FFE3E9; }
 .passed-col .col-head{ border-color: #D6F0DE; }
@@ -266,9 +266,43 @@ button{
     display: flex;
     align-items: center;
     gap: 6px;
+    flex: none;
 }
 .pending-col .col-title{ color: #E76B87; }
 .passed-col .col-title{ color: #3E9E68; }
+
+.col-head-right{
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: none;
+}
+
+.pin-btn{
+    width: 30px;
+    height: 30px;
+    flex: none;
+    border-radius: 10px;
+    font-size: 15px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #F3ECE5;
+    filter: grayscale(1);
+    opacity: .55;
+    transition: transform .18s ease, background .18s ease,
+                opacity .18s ease, filter .18s ease, box-shadow .18s ease;
+}
+.pin-btn:active{ transform: scale(.88); }
+.pin-btn.on{
+    background: linear-gradient(135deg, #FF9FAE 0%, #FF8FA3 100%);
+    filter: none;
+    opacity: 1;
+    box-shadow: 0 2px 8px rgba(255,143,163,.45);
+    transform: rotate(-14deg);
+}
+.pin-btn.on:active{ transform: rotate(-14deg) scale(.88); }
 
 .col-count{
     font-size: 15px;
@@ -280,7 +314,30 @@ button{
 .pending-col .col-count{ background: #FFE9EE; color: #E76B87; }
 .passed-col .col-count{ background: #D8F4E1; color: #3E9E68; }
 
-/* 网格 */
+.last-ten-tip{
+    display: none;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 900;
+    color: #E76B87;
+    background: linear-gradient(135deg, #FFF0F3 0%, #FFE3E9 100%);
+    border-radius: 14px;
+    padding: 12px 10px;
+    margin-bottom: 8px;
+    box-shadow: 0 3px 12px rgba(255,143,163,.25);
+    border: 2px dashed #FFB3C1;
+    letter-spacing: .5px;
+    flex: none;
+}
+.last-ten-tip.show{
+    display: block;
+    animation: pulseTip 1.2s ease-in-out infinite alternate;
+}
+@keyframes pulseTip{
+    0% { transform: scale(1); }
+    100% { transform: scale(1.03); }
+}
+
 .grid{
     flex: 1;
     min-height: 0;
@@ -311,8 +368,6 @@ button{
     padding: 8px 6px;
     transition: transform .12s ease, box-shadow .16s ease;
     overflow: hidden;
-    /* 注意：不再无条件使用 will-change: transform，
-       避免大量卡片各自建立合成层引发渲染异常（蓝色色块遮挡） */
     transform: translateZ(0);
 }
 .card:active{ transform: scale(.93); }
@@ -381,6 +436,71 @@ body.edit-mode .pending-col .card{
 }
 body.edit-mode .passed-col .card{
     box-shadow: 0 0 0 3px var(--orange), var(--shadow-sm);
+}
+
+/* ---------- 3.3.1 左侧固定模式：已打卡的“占位卡” ---------- */
+.pending-col .card.ghost{
+    background: #FAF6F1;
+    box-shadow: inset 0 0 0 2px #F1E7DD;
+    opacity: .5;
+    pointer-events: none;
+    cursor: default;
+}
+.pending-col .card.ghost::before{ opacity: .3; }
+.pending-col .card.ghost .avatar{ opacity: .55; }
+.pending-col .card.ghost .cname{ color: var(--muted); }
+.pending-col .card.ghost:active{ transform: translateZ(0); }
+
+.ghost-mark{
+    position: absolute;
+    right: 5px;
+    top: 8px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #7ED9A0;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(126,217,160,.5);
+    z-index: 2;
+}
+
+/* 奖牌样式 */
+.medal-badge{
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    font-size: 22px;
+    z-index: 3;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,.2));
+    animation: popInMedal .3s cubic-bezier(.2,1.2,.4,1) both;
+}
+@keyframes popInMedal{
+    from{ transform: scale(0); opacity: 0; }
+    to  { transform: scale(1); opacity: 1; }
+}
+
+body.edit-mode .pending-col .card.ghost{
+    pointer-events: auto;
+    box-shadow: 0 0 0 3px var(--orange), var(--shadow-sm);
+}
+
+.all-done-float{
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 14px 10px;
+    font-size: 15px;
+    font-weight: 800;
+    color: #3E9E68;
+    background: #E9FBF0;
+    border-radius: 14px;
+    margin-top: 4px;
+    letter-spacing: .5px;
 }
 
 .empty-tip{
@@ -473,7 +593,6 @@ body.edit-mode .passed-col .card{
     50%    { box-shadow: 0 4px 24px rgba(255,143,163,.90); }
 }
 
-/* 舞台 */
 .wave-stage{
     position: relative;
     width: 100%;
@@ -525,7 +644,6 @@ body.edit-mode .passed-col .card{
     box-shadow: 0 3px 10px rgba(255,143,163,.42);
 }
 
-/* 模式切换 */
 .mode-picker{
     position: absolute;
     left: 50%;
@@ -561,14 +679,13 @@ body.edit-mode .passed-col .card{
 }
 
 /* ==========================================================
-   双模式（含：安静模式夜空背景 + 更醒目的月亮 + 星星闪烁）
+   双模式
    ========================================================== */
 .dual-layer{
     position: absolute;
     inset: 0;
 }
 
-/* 安静模式下的“夜空”背景层：只在安静模式显示，用暗色径向渐变衬托星星与月亮 */
 .dual-layer::before{
     content: '';
     position: absolute;
@@ -585,7 +702,6 @@ body.edit-mode .passed-col .card{
     opacity: 1;
 }
 
-/* 星星 */
 .dual-stars{
     position: absolute;
     inset: 0;
@@ -602,7 +718,6 @@ body.edit-mode .passed-col .card{
     transition: opacity .35s ease;
 }
 
-/* 安静模式下星星闪烁（只动 scale / 光晕，opacity 仍由 JS 控制） */
 .dual-layer.quiet .dual-stars i{
     animation: starTwinkle 3.6s ease-in-out infinite;
     animation-delay: var(--tw, 0s);
@@ -618,7 +733,6 @@ body.edit-mode .passed-col .card{
     }
 }
 
-/* 月亮 —— 更亮、更大、更有层次，背景再浅也看得清 */
 .dual-moon{
     position: absolute;
     left: 50%;
@@ -648,7 +762,6 @@ body.edit-mode .passed-col .card{
     will-change: opacity, transform;
 }
 
-/* 安静模式下月亮呼吸发光 */
 .dual-layer.quiet .dual-moon{
     animation: moonBreath 3.4s ease-in-out infinite;
 }
@@ -717,7 +830,6 @@ body.edit-mode .passed-col .card{
     box-shadow: 0 2px 6px rgba(255,143,163,.4);
 }
 
-/* 声控进度 */
 .prog-layer{ position: absolute; inset: 0; }
 .prog-track{
     position: absolute;
@@ -730,7 +842,6 @@ body.edit-mode .passed-col .card{
     overflow: hidden;
     box-shadow: inset 0 1px 3px rgba(0,0,0,.06);
 }
-/* 注意：这里使用 swim-fill，避免与顶栏进度条 .prog-fill 冲突 */
 .swim-fill{
     position: absolute;
     left: 0;
@@ -760,7 +871,6 @@ body.edit-mode .passed-col .card{
     z-index: 2;
 }
 
-/* 倒计时工具栏（模式切换 + 时间设定 + 重置） */
 .prog-toolbar{
     position: absolute;
     left: 10px;
@@ -819,9 +929,6 @@ body.edit-mode .passed-col .card{
     font-weight: 800;
     color: #C97B4E;
 }
-.prog-toolbar.voice .prog-setter{
-    display: none;
-}
 .prog-setter *{ pointer-events: auto; }
 .prog-setter input{
     width: 42px;
@@ -876,7 +983,6 @@ body.edit-mode .passed-col .card{
 }
 .prog-reset:active{ transform: scale(.92); }
 
-/* 气球 */
 .balloon-layer{
     position: absolute;
     inset: 0;
@@ -903,11 +1009,11 @@ body.edit-mode .passed-col .card{
 
 .tb{
     height: 50px;
-    padding: 0 22px;
+    padding: 0 18px;
     border-radius: 15px;
     background: #fff;
     box-shadow: var(--shadow-sm);
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 800;
     color: var(--ink);
     letter-spacing: .3px;
@@ -926,6 +1032,10 @@ body.edit-mode .passed-col .card{
     font-size: 24px;
     margin-left: auto;
     line-height: 1;
+}
+#randomBtn{
+    background: #E6F7EC;
+    color: #3E9E68;
 }
 
 /* ==========================================================================
@@ -947,6 +1057,26 @@ body.edit-mode .passed-col .card{
     font-size: 20px;
     line-height: 1;
     z-index: 9999;
+}
+
+#comboLayer{
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.combo-item{
+    position: absolute;
+    font-size: 60px;
+    font-weight: 900;
+    color: #FF8FA3;
+    text-shadow: 3px 3px 0 #fff, -3px -3px 0 #fff, 3px -3px 0 #fff, -3px 3px 0 #fff, 0 10px 20px rgba(255,143,163,.5);
+    opacity: 0;
+    transform: scale(0.5);
 }
 
 /* ==========================================================================
@@ -1120,24 +1250,25 @@ body.edit-mode .passed-col .card{
 }
 .menu-item.danger{ color: var(--danger); }
 
-.reset-fill{
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 0%;
-    background: #FDE6E1;
-    pointer-events: none;
-    transition: width .1s linear;
+/* 左侧固定开关的状态徽章 */
+.pin-state{
+    margin-left: auto;
+    flex: none;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 3px 11px;
+    border-radius: 99px;
+    background: #FFE9EE;
+    color: #E76B87;
+    letter-spacing: .5px;
 }
-.menu-item.pressing .reset-fill{
-    width: 100%;
-    transition: width 1.5s linear;
+.pin-state.off{
+    background: #F0E9E2;
+    color: var(--muted);
 }
-.menu-item > *:not(.reset-fill){ position: relative; z-index: 1; }
 
 /* ==========================================================================
-   7. 名单编辑
+   7. 名单编辑 / 抽签弹窗
    ========================================================================== */
 .roster-list{
     display: flex;
@@ -1175,6 +1306,63 @@ body.edit-mode .passed-col .card{
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+/* 抽签弹窗 */
+.picker-content{
+    text-align: center;
+    padding: 20px 0;
+}
+.picker-display{
+    width: 140px;
+    height: 140px;
+    margin: 0 auto 20px;
+    border-radius: 50%;
+    background: #FFFAF5;
+    border: 4px dashed #FFB3C1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: 900;
+    color: #E76B87;
+    transition: transform .1s ease;
+    position: relative;
+    overflow: hidden;
+}
+.picker-display img{
+    width: 100%; height: 100%; object-fit: cover;
+}
+.picker-display .av{
+    width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+    font-size: 60px;
+}
+.picker-sub{
+    font-size: 15px;
+    color: var(--ink-soft);
+    margin-bottom: 16px;
+    font-weight: 800;
+    min-height: 22px;
+}
+.picker-target{
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.picker-target button{
+    height: 36px;
+    padding: 0 20px;
+    border-radius: 99px;
+    font-size: 14px;
+    font-weight: 800;
+    background: #FFF1E6;
+    color: var(--ink-soft);
+}
+.picker-target button.active{
+    background: linear-gradient(135deg, #FF9FAE 0%, #FF8FA3 100%);
+    color: #fff;
+    box-shadow: 0 3px 8px rgba(255,143,163,.4);
 }
 
 .add-row{
@@ -1277,7 +1465,6 @@ body.edit-mode .passed-col .card{
 .report-sec.no .tag{ background: #FFE9EE; color: #D9567A; }
 .tag img{ width: 18px; height: 18px; border-radius: 50%; object-fit: cover; }
 
-/* 历史 */
 .his-row{
     display: flex;
     align-items: center;
@@ -1322,7 +1509,6 @@ body.edit-mode .passed-col .card{
     line-height: 1.9;
 }
 
-/* 头像编辑 */
 .upload-label{
     display: block;
     width: 100%;
@@ -1359,7 +1545,6 @@ body.edit-mode .passed-col .card{
     background: #FFE9EE;
 }
 
-/* 轻提示 */
 #toast{
     position: fixed;
     left: 50%;
@@ -1407,6 +1592,11 @@ body.edit-mode .passed-col .card{
     .column{ border-radius: 20px; padding: 8px 10px 10px; }
     .col-title{ font-size: 14px; }
 
+    .pin-btn{ width: 27px; height: 27px; font-size: 13px; border-radius: 9px; }
+    .col-count{ font-size: 13px; padding: 2px 10px; }
+    
+    .last-ten-tip{ font-size: 13px; padding: 8px; margin-bottom: 6px; }
+
     .grid{ grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 6px; }
     .card{ height: 76px; border-radius: 16px; }
     .avatar{ width: 30px; height: 30px; font-size: 16px; }
@@ -1415,6 +1605,8 @@ body.edit-mode .passed-col .card{
     .passed-col .card{ height: 70px; }
     .passed-col .avatar{ width: 26px; height: 26px; font-size: 14px; }
     .passed-col .cname{ font-size: 13px; }
+    .ghost-mark{ width: 15px; height: 15px; font-size: 10px; right: 4px; top: 6px; }
+    .medal-badge{ font-size: 18px; top: -2px; left: -2px; }
 
     .right-dash{ padding: 8px; gap: 6px; border-radius: 16px; }
     .dash-top{ gap: 6px; }
@@ -1442,7 +1634,7 @@ body.edit-mode .passed-col .card{
     .prog-reset{ width: 23px; height: 23px; font-size: 12px; }
     .balloon{ font-size: 18px; }
 
-    .tb{ height: 46px; padding: 0 14px; font-size: 15px; flex: 1; }
+    .tb{ height: 46px; padding: 0 12px; font-size: 14px; flex: 1; }
     .tb.more{ flex: none; width: 46px; }
     .menu-panel{ right: 8px; left: 8px; width: auto; bottom: 66px; }
 }
@@ -1490,8 +1682,14 @@ body.edit-mode .passed-col .card{
         <section class="column pending-col">
             <div class="col-head">
                 <span class="col-title">🐣 还没交</span>
-                <span class="col-count" id="pendingCount">0</span>
+                <span class="col-head-right">
+                    <button class="pin-btn" id="pinBtn" title="左侧头像固定：开启后点一个头像，其他头像位置不动">📌</button>
+                    <span class="col-count" id="pendingCount">0</span>
+                </span>
             </div>
+            <!-- 最后10人激励横幅 -->
+            <div class="last-ten-tip" id="lastTenTip"></div>
+            
             <div class="grid" id="pendingGrid"></div>
         </section>
 
@@ -1576,9 +1774,35 @@ body.edit-mode .passed-col .card{
         <button class="tb" id="undoBtn">↩ 撤销</button>
         <button class="tb primary" id="saveTodayBtn">存今天</button>
         <button class="tb" id="csvBtn">导出 CSV</button>
+        <button class="tb" id="randomBtn">🎲 抽签</button>
         <button class="tb more" id="moreBtn">⋯</button>
     </footer>
 
+</div>
+
+<!-- 抽签弹窗 -->
+<div class="modal" id="randomModal">
+    <div class="modal-card">
+        <div class="modal-head">
+            <h3>🎲 幸运抽签</h3>
+            <button class="x" data-close="randomModal">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="picker-content">
+                <div class="picker-display" id="pickerDisplay">?</div>
+                <div class="picker-sub" id="pickerSub">点击下方开始抽选</div>
+                <div class="picker-target">
+                    <button class="active" data-target="pending">抽未交的</button>
+                    <button data-target="passed">抽已交的</button>
+                    <button data-target="all">抽全班的</button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn-ghost" data-close="randomModal">关闭</button>
+            <button class="btn-main" id="startRollBtn">开始抽选</button>
+        </div>
+    </div>
 </div>
 
 <!-- 更多菜单 -->
@@ -1586,6 +1810,10 @@ body.edit-mode .passed-col .card{
     <div class="menu-panel">
         <button class="menu-item" data-action="roster">
             <span class="ico">👥</span><span>名单管理</span>
+        </button>
+        <button class="menu-item" data-action="pin">
+            <span class="ico">📌</span><span>左侧头像固定</span>
+            <span class="pin-state" id="pinState">开</span>
         </button>
         <button class="menu-item" data-action="avatar">
             <span class="ico">🖼</span><span>换头像</span>
@@ -1602,9 +1830,9 @@ body.edit-mode .passed-col .card{
         <button class="menu-item" data-action="backup">
             <span class="ico">💾</span><span>备份 / 恢复</span>
         </button>
+        <!-- 重置按钮改为一键重置 -->
         <button class="menu-item danger" id="resetItem">
-            <span class="reset-fill"></span>
-            <span class="ico">⚠️</span><span>长按 1.5 秒重置</span>
+            <span class="ico">⚠️</span><span>一键重置</span>
         </button>
     </div>
 </div>
@@ -1776,6 +2004,7 @@ body.edit-mode .passed-col .card{
 </div>
 
 <div id="toast"></div>
+<div id="comboLayer"></div>
 
 <script>
 (function () {
@@ -1820,6 +2049,15 @@ let editMode = false;
 let editingStudentId = null;
 let audioCtx = null;
 
+/* 连击状态 */
+let comboCount = 0;
+let lastPassTime = 0;
+
+/* 抽签状态 */
+let pickerTarget = 'pending';
+let pickerRolling = false;
+let pickerTimer = null;
+
 const $  = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 
@@ -1832,6 +2070,8 @@ const elProgFill    = $('#progFill');
 const elBigClock    = $('#bigClock');
 const elTabs        = $('#tabs');
 const elSoundBtn    = $('#soundBtn');
+const elLastTenTip  = $('#lastTenTip');
+const elComboLayer  = $('#comboLayer');
 
 /* ==========================================================================
    2. 通用工具
@@ -1922,6 +2162,7 @@ function initState() {
             version: DATA_VERSION,
             activeTab: DEFAULT_TABS[0].id,
             soundOn: true,
+            pinMode: true,
             date: todayStr(),
             tabs: {},
             history: []
@@ -1947,6 +2188,7 @@ function initState() {
     if (!s.tabs[s.activeTab]) s.activeTab = Object.keys(s.tabs)[0];
     if (!Array.isArray(s.history)) s.history = [];
     if (typeof s.soundOn !== 'boolean') s.soundOn = true;
+    if (typeof s.pinMode !== 'boolean') s.pinMode = true;
 
     return s;
 }
@@ -2022,6 +2264,17 @@ function sortPending(tab) {
     const pending = tab.students.filter(s => !tab.passed[s.id]);
     if (!pinyinReady) return pending;
     return pending.slice().sort((a, b) => {
+        const pa = fullPinyin(a.name);
+        const pb = fullPinyin(b.name);
+        if (pa !== pb) return pa < pb ? -1 : 1;
+        return a.id - b.id;
+    });
+}
+
+function sortedAll(tab) {
+    const list = tab.students.slice();
+    if (!pinyinReady) return list;
+    return list.sort((a, b) => {
         const pa = fullPinyin(a.name);
         const pb = fullPinyin(b.name);
         if (pa !== pb) return pa < pb ? -1 : 1;
@@ -2300,7 +2553,25 @@ function spawnEffect(x, y, cardEl) {
     } catch (e) {}
 }
 
-/* 兜底清理：防止任何特效元素因动画中断而永久残留（会造成大色块遮挡） */
+/* 连击特效 */
+function showCombo(count) {
+    const el = document.createElement('div');
+    el.className = 'combo-item';
+    el.textContent = 'COMBO x ' + count + '!';
+    
+    const colors = ['#FF8FA3', '#FFB86B', '#FFD93D', '#7ED9A0', '#6EC6FF', '#B39DDB'];
+    el.style.color = colors[Math.min(count - 3, colors.length - 1)];
+    
+    elComboLayer.appendChild(el);
+    
+    el.animate([
+        { transform: 'translate(-50%, -50%) scale(0.3) rotate(-10deg)', opacity: 0 },
+        { transform: 'translate(-50%, -50%) scale(1.2) rotate(5deg)', opacity: 1, offset: 0.3 },
+        { transform: 'translate(-50%, -50%) scale(1) rotate(0deg)', opacity: 1, offset: 0.6 },
+        { transform: 'translate(-50%, -80%) scale(0.8) rotate(10deg)', opacity: 0 }
+    ], { duration: 1000, easing: 'cubic-bezier(.2,.8,.3,1)' }).onfinish = () => el.remove();
+}
+
 function startFxJanitor() {
     setInterval(function () {
         if (!fxLayer) return;
@@ -2314,7 +2585,6 @@ function startFxJanitor() {
                 el.remove();
             }
         }
-        // 数量硬上限，超出时丢弃最早的
         const over = fxLayer.children.length - 220;
         for (let j = 0; j < over; j++) {
             if (fxLayer.firstElementChild) fxLayer.firstElementChild.remove();
@@ -2323,7 +2593,7 @@ function startFxJanitor() {
 }
 
 /* ==========================================================================
-   7. 舞台：音浪 / 双模式 / 鲸鱼倒计时（时间 / 音控） / 烟花 / 气球
+   7. 舞台
    ========================================================================== */
 const MAX_BARS = 48;
 const WAVE_THEMES = [
@@ -2354,26 +2624,23 @@ let lastFrameT = 0;
 let lastBurstT = 0;
 let badgeTextCache = '';
 
-/* 舞台模式 */
 let stageMode = 'wave';
 let dualMode = 'read';
 
-/* --- 鲸鱼倒计时（同时支持「时间倒计时」和「音控倒计时」两种模式） --- */
-const PROG_DEFAULT_SEC = 300;   // 默认 5 分钟
-const PROG_MIN_SEC     = 30;    // 最少 30 秒
-const PROG_MAX_SEC     = 10800; // 最多 180 分钟
+const PROG_DEFAULT_SEC = 300;
+const PROG_MIN_SEC     = 30;
+const PROG_MAX_SEC     = 10800;
 
-let progMode      = 'time';          // 'time' | 'voice'
-let progDuration  = PROG_DEFAULT_SEC; // 时间模式：设定总时长（秒）
-let progRemaining = PROG_DEFAULT_SEC; // 时间模式：剩余时长（秒）
-let progEndAt     = 0;                // 时间模式：运行中结束时间戳（ms）
-let progRunning   = false;            // 时间模式：是否正在倒计时
-let progVoiceValue = 0;               // 音控模式：进度 0~100
-let progSaved     = false;            // 是否已完成并自动存档（两种模式共用）
-let progValue     = 0;                // 统一显示进度 0~100
+let progMode      = 'time';
+let progDuration  = PROG_DEFAULT_SEC;
+let progRemaining = PROG_DEFAULT_SEC;
+let progEndAt     = 0;
+let progRunning   = false;
+let progVoiceValue = 0;
+let progSaved     = false;
+let progValue     = 0;
 let progSaveTimer = null;
 
-/* DOM 引用 */
 let waveStage, dualLayer, progLayer, balloonLayer;
 let dualStarsBox, dualMoonEl, dualValEl;
 let progFillEl, progSwimmerEl, progMinutesInput, progToolbar;
@@ -2381,14 +2648,11 @@ let waveBadgeEl = null;
 let dualStarEls = [];
 let modeBtns = [];
 
-/* 烟花 */
 let fwParticles = [];
 let fwTimer = 0;
 
-/* 气球 */
 let balloonEls = [];
 
-/* --- 颜色工具 --- */
 function hexToRgb(hex) {
     let h = String(hex).replace('#', '');
     if (h.length === 3) h = h.split('').map(c => c + c).join('');
@@ -2411,7 +2675,6 @@ function themeColor(theme, t) {
     return mixHex(cols[i], cols[i + 1], p - i);
 }
 
-/* --- 倒计时进度持久化 --- */
 function loadProg() {
     try {
         const raw = localStorage.getItem(PROG_KEY);
@@ -2419,7 +2682,6 @@ function loadProg() {
         const o = JSON.parse(raw);
         if (!o || o.date !== todayStr()) return;
 
-        // 旧版（纯声控，无 duration）数据忽略，直接使用默认值
         if (typeof o.duration !== 'number' || o.duration <= 0) return;
 
         progMode = (o.mode === 'voice') ? 'voice' : 'time';
@@ -2484,7 +2746,6 @@ function computeProgValue() {
     return progVoiceValue;
 }
 
-/* --- 初始化舞台 --- */
 function initStage() {
     waveCanvas = $('#waveCanvas');
     if (!waveCanvas) return;
@@ -2529,7 +2790,6 @@ function buildDualStars() {
         const s = document.createElement('i');
         s.style.left = (Math.random() * 92 + 4) + '%';
         s.style.top = (Math.random() * 78 + 8) + '%';
-        // 给每颗星星一个独立的闪烁延时，让夜空更自然
         s.style.setProperty('--tw', (Math.random() * 3.5).toFixed(2) + 's');
         dualStarsBox.appendChild(s);
         dualStarEls.push(s);
@@ -2545,10 +2805,8 @@ function bindStageEvents() {
             dualMode = btn.dataset.dual;
             $$('.dual-sub button').forEach(b => b.classList.toggle('active', b === btn));
             badgeTextCache = '';
-            // 切换双模式时同步夜空背景类
             if (dualLayer) dualLayer.classList.toggle('quiet', dualMode === 'quiet');
             if (dualMode === 'quiet') {
-                // 清空星星的内联 transform，让闪烁动画完全接管
                 dualStarEls.forEach(s => { s.style.transform = ''; });
             }
         });
@@ -2556,12 +2814,10 @@ function bindStageEvents() {
     const resetBtn = $('#progReset');
     if (resetBtn) resetBtn.addEventListener('click', resetProgress);
 
-    /* 时间 / 音控 模式切换 */
     $$('.pm-btn').forEach(btn => {
         btn.addEventListener('click', () => setProgMode(btn.dataset.pmode));
     });
 
-    /* 倒计时设定 */
     const applyBtn = $('#progApply');
     if (applyBtn) applyBtn.addEventListener('click', applyProgMinutes);
     if (progMinutesInput) {
@@ -2573,18 +2829,15 @@ function bindStageEvents() {
     }
 }
 
-/* 切换「时间倒计时 / 音控倒计时」 */
 function setProgMode(mode) {
     if (progMode === mode) return;
     progMode = mode;
     updateProgModeUI();
 
     if (mode === 'time') {
-        // 进入时间模式：如果已经完成，则重置并重新开始
         startProgress(progDuration);
         toast('⏳ 已切换到时间倒计时');
     } else {
-        // 进入音控模式：重置音控进度
         progVoiceValue = 0;
         progValue = 0;
         progSaved = false;
@@ -2599,9 +2852,8 @@ function setProgMode(mode) {
 }
 
 function updateProgModeUI() {
-    if (progToolbar) progToolbar.classList.toggle('voice', progMode === 'voice');
     $$('.pm-btn').forEach(b => b.classList.toggle('active', b.dataset.pmode === progMode));
-    if (progMinutesInput && progMode === 'time' && document.activeElement !== progMinutesInput) {
+    if (progMinutesInput && document.activeElement !== progMinutesInput) {
         progMinutesInput.value = minutesText(progDuration);
     }
 }
@@ -2707,7 +2959,6 @@ function updateMicLevel(freqData) {
     if (micLevel > 1) micLevel = 1;
 }
 
-/* --- 音浪柱 --- */
 function stepWaveBars(freqData, now, dt) {
     const live = !!freqData;
 
@@ -2877,7 +3128,6 @@ function drawWave() {
     }
 }
 
-/* --- 双模式 --- */
 function renderDual() {
     if (!dualStarEls.length) return;
     const level = micLevel;
@@ -2892,17 +3142,14 @@ function renderDual() {
         dualValEl.textContent = Math.round(level * 100) + '%';
     } else {
         const q = 1 - level;
-        // 星星越安静越亮（再配合 CSS 闪烁动画）
         const starOp = (0.32 + 0.45 * q).toFixed(2);
         dualStarEls.forEach(s => { s.style.opacity = starOp; });
-        // 月亮：越安静越亮、越大（大小通过 CSS 变量控制，不影响动画）
         dualMoonEl.style.opacity = (0.35 + 0.65 * q).toFixed(2);
         dualMoonEl.style.setProperty('--moon-scale', (1 + q * 0.12).toFixed(3));
         dualValEl.textContent = '安静 ' + Math.round(q * 100) + '%';
     }
 }
 
-/* --- 鲸鱼进度：时间倒计时 / 音控倒计时 --- */
 function startProgress(seconds) {
     progDuration = Math.max(PROG_MIN_SEC, Math.min(PROG_MAX_SEC, Math.round(seconds)));
     progRemaining = progDuration;
@@ -2920,7 +3167,6 @@ function startProgress(seconds) {
 
 function renderStageProgress(dt) {
     if (progMode === 'time') {
-        /* 时间倒计时 */
         if (progRunning) {
             progRemaining = Math.max(0, (progEndAt - Date.now()) / 1000);
             if (progRemaining <= 0) {
@@ -2939,10 +3185,11 @@ function renderStageProgress(dt) {
             ? Math.max(0, Math.min(100, (1 - progRemaining / progDuration) * 100))
             : 0;
     } else {
-        /* 音控倒计时 */
-        if (!progSaved && micLevel > 0.08) {
-            const k = 0.005;
-            progVoiceValue = Math.min(100, progVoiceValue + micLevel * dt * k);
+        if (!progSaved && micLevel > 0.05) {
+            const baseRate = 100 / (progDuration * 60);
+            const volFactor = Math.max(0.2, micLevel / 0.15);
+            progVoiceValue = Math.min(100, progVoiceValue + baseRate * volFactor * dt);
+            
             if (progVoiceValue >= 100) {
                 progVoiceValue = 100;
                 progSaved = true;
@@ -2956,7 +3203,6 @@ function renderStageProgress(dt) {
         }
         progValue = progVoiceValue;
     }
-
     updateProgressUI();
 }
 
@@ -3022,21 +3268,27 @@ function applyProgMinutes() {
     }
     m = Math.min(PROG_MAX_SEC / 60, Math.max(PROG_MIN_SEC / 60, m));
     progMinutesInput.value = String(Math.round(m * 10) / 10);
+    
+    const newSec = Math.round(m * 60);
+    progDuration = newSec;
 
-    /* 设定后切到时间模式 */
-    if (progMode !== 'time') {
-        progMode = 'time';
-        updateProgModeUI();
+    if (progMode === 'time') {
+        startProgress(progDuration);
+        toast('⏳ 已设定倒计时 ' + (Math.round(m * 10) / 10) + ' 分钟，鲸鱼出发啦');
+    } else {
+        progVoiceValue = 0;
+        progValue = 0;
+        progSaved = false;
+        updateProgressUI();
+        saveProg();
+        toast('🎤 已设定音控目标 ' + (Math.round(m * 10) / 10) + ' 分钟，喊起来吧');
     }
-    startProgress(Math.round(m * 60));
 
     if (stageMode !== 'progress') {
         setStageMode('progress');
     }
-    toast('⏳ 已设定倒计时 ' + (Math.round(m * 10) / 10) + ' 分钟，鲸鱼出发啦');
 }
 
-/* --- 烟花 --- */
 function spawnFireworkBurst() {
     const cx = waveW * (0.2 + Math.random() * 0.6);
     const cy = waveH * (0.2 + Math.random() * 0.4);
@@ -3093,7 +3345,6 @@ function renderFirework(now, dt) {
     if (fwParticles.length > 400) fwParticles.splice(0, fwParticles.length - 400);
 }
 
-/* --- 气球 --- */
 function spawnBalloon() {
     if (!balloonLayer) return;
     const el = document.createElement('div');
@@ -3133,7 +3384,6 @@ function renderBalloon(now, dt) {
     }
 }
 
-/* --- 徽章文字 --- */
 function updateWaveBadge() {
     if (!waveBadgeEl) return;
     let txt = '';
@@ -3148,8 +3398,7 @@ function updateWaveBadge() {
                 txt = '⏳ 点击 ↺ 开始 · ' + minutesText(progDuration) + ' 分钟';
             }
         } else {
-            /* 音控模式：按原逻辑给出大致剩余时间 */
-            const remainMin = Math.max(0, Math.ceil((100 - progValue) / 100 * 20));
+            const remainMin = Math.max(0, Math.ceil((100 - progValue) / 100 * progDuration / 60));
             txt = progValue >= 99
                 ? '🏝 即将到达'
                 : `🎤 音控 ${Math.round(progValue)}% · 约剩 ${remainMin} 分钟`;
@@ -3180,7 +3429,6 @@ function updateWaveBadge() {
     }
 }
 
-/* --- 麦克风开关 --- */
 function toggleMic() {
     if (micStream) { stopMic(); return; }
 
@@ -3297,12 +3545,20 @@ function makeAvatarEl(student) {
     return box;
 }
 
-function makeCard(student, isPassed) {
+function makeCard(student, isPassed, rank) {
     const btn = document.createElement('button');
     btn.className = 'card';
     btn.type = 'button';
     btn.dataset.id = student.id;
     btn.style.setProperty('--stripe', candyOf(student.id));
+
+    // 奖牌逻辑
+    if (rank && rank <= 3) {
+        const medal = document.createElement('span');
+        medal.className = 'medal-badge';
+        medal.textContent = rank === 1 ? '🥇' : (rank === 2 ? '🥈' : '🥉');
+        btn.appendChild(medal);
+    }
 
     btn.appendChild(makeAvatarEl(student));
 
@@ -3320,21 +3576,84 @@ function makeCard(student, isPassed) {
     return btn;
 }
 
+function makeGhostCard(student) {
+    const btn = document.createElement('button');
+    btn.className = 'card ghost';
+    btn.type = 'button';
+    btn.dataset.id = student.id;
+    btn.dataset.ghost = '1';
+    btn.style.setProperty('--stripe', candyOf(student.id));
+
+    btn.appendChild(makeAvatarEl(student));
+
+    const nm = document.createElement('span');
+    nm.className = 'cname' + (student.name.length >= 5 ? ' long' : '');
+    nm.textContent = student.name;
+    btn.appendChild(nm);
+
+    const mark = document.createElement('span');
+    mark.className = 'ghost-mark';
+    mark.textContent = '✓';
+    btn.appendChild(mark);
+
+    btn.addEventListener('click', () => {
+        if (editMode) openAvatarModal(student.id);
+    });
+
+    return btn;
+}
+
 function renderPending() {
     const tab = currentTab();
-    const list = sortPending(tab);
-
     elPendingGrid.innerHTML = '';
+
+    if (tab.students.length === 0) {
+        elPendingCnt.textContent = 0;
+        elLastTenTip.classList.remove('show');
+        const tip = document.createElement('div');
+        tip.className = 'empty-tip';
+        tip.innerHTML = '<span class="big">📝</span>名单还是空的<br>去「⋯ → 名单管理」添加学生吧';
+        elPendingGrid.appendChild(tip);
+        return;
+    }
+
+    if (state.pinMode) {
+        const all = sortedAll(tab);
+        const pendingCount = all.filter(s => !tab.passed[s.id]).length;
+        elPendingCnt.textContent = pendingCount;
+
+        const frag = document.createDocumentFragment();
+        all.forEach(s => {
+            frag.appendChild(tab.passed[s.id] ? makeGhostCard(s) : makeCard(s, false));
+        });
+        elPendingGrid.appendChild(frag);
+
+        if (pendingCount > 0 && pendingCount <= 10) {
+            elLastTenTip.textContent = pendingCount === 1 
+                ? '👀 就剩你 1 个了！加油吧💪' 
+                : `💪 就剩你们 ${pendingCount} 个了！加油吧💪`;
+            elLastTenTip.classList.add('show');
+        } else {
+            elLastTenTip.classList.remove('show');
+        }
+
+        if (pendingCount === 0) {
+            const tip = document.createElement('div');
+            tip.className = 'all-done-float';
+            tip.textContent = '🎉 全部交齐啦！';
+            elPendingGrid.appendChild(tip);
+        }
+        return;
+    }
+
+    const list = sortPending(tab);
     elPendingCnt.textContent = list.length;
 
     if (list.length === 0) {
+        elLastTenTip.classList.remove('show');
         const tip = document.createElement('div');
         tip.className = 'empty-tip';
-        if (tab.students.length === 0) {
-            tip.innerHTML = '<span class="big">📝</span>名单还是空的<br>去「⋯ → 名单管理」添加学生吧';
-        } else {
-            tip.innerHTML = '<span class="big">🎉</span>全部交齐啦！';
-        }
+        tip.innerHTML = '<span class="big">🎉</span>全部交齐啦！';
         elPendingGrid.appendChild(tip);
         return;
     }
@@ -3342,6 +3661,15 @@ function renderPending() {
     const frag = document.createDocumentFragment();
     list.forEach(s => frag.appendChild(makeCard(s, false)));
     elPendingGrid.appendChild(frag);
+
+    if (list.length > 0 && list.length <= 10) {
+        elLastTenTip.textContent = list.length === 1 
+            ? '👀 就剩你 1 个了！加油吧💪' 
+            : `💪 就剩你们 ${list.length} 个了！加油吧💪`;
+        elLastTenTip.classList.add('show');
+    } else {
+        elLastTenTip.classList.remove('show');
+    }
 }
 
 function renderPassed() {
@@ -3362,7 +3690,9 @@ function renderPassed() {
     }
 
     const frag = document.createDocumentFragment();
-    list.forEach(s => frag.appendChild(makeCard(s, true)));
+    list.forEach((s, idx) => {
+        frag.appendChild(makeCard(s, true, idx + 1));
+    });
     elPassedGrid.appendChild(frag);
 }
 
@@ -3374,7 +3704,7 @@ function render() {
 }
 
 /* ==========================================================================
-   9. 打卡核心 + FLIP
+   9. 打卡核心 + 连击
    ========================================================================== */
 function pushUndo(tab) {
     undoStack.push({
@@ -3401,7 +3731,7 @@ function celebrateAllDone(silent) {
 function setPassed(id, passed) {
     const tab = currentTab();
     const fromEl = passed
-        ? elPendingGrid.querySelector('.card[data-id="' + id + '"]')
+        ? elPendingGrid.querySelector('.card[data-id="' + id + '"]:not(.ghost)')
         : elPassedGrid.querySelector('.card[data-id="' + id + '"]');
     const fromRect = fromEl ? fromEl.getBoundingClientRect() : null;
     const cx = fromRect ? fromRect.left + fromRect.width / 2 : window.innerWidth / 2;
@@ -3421,13 +3751,27 @@ function setPassed(id, passed) {
     const allDone = tab.students.length > 0 && tab.students.every(s => tab.passed[s.id]);
     save();
 
+    if (passed) {
+        const now = Date.now();
+        if (now - lastPassTime < 2000) {
+            comboCount++;
+            if (comboCount >= 3) {
+                showCombo(comboCount);
+                playDing(600 + comboCount * 100);
+            }
+        } else {
+            comboCount = 1;
+        }
+        lastPassTime = now;
+    }
+
     renderProgress();
     renderPending();
     renderPassed();
 
     const toEl = passed
         ? elPassedGrid.querySelector('.card[data-id="' + id + '"]')
-        : elPendingGrid.querySelector('.card[data-id="' + id + '"]');
+        : elPendingGrid.querySelector('.card[data-id="' + id + '"]:not(.ghost)');
 
     if (fromRect && toEl && !reduceMotion()) {
         const toRect = toEl.getBoundingClientRect();
@@ -3445,12 +3789,25 @@ function setPassed(id, passed) {
         }
     }
 
+    if (passed && state.pinMode) {
+        const ghostEl = elPendingGrid.querySelector('.card.ghost[data-id="' + id + '"]');
+        if (ghostEl && !reduceMotion()) {
+            try {
+                ghostEl.animate([
+                    { transform: 'scale(.86)', opacity: 0 },
+                    { transform: 'scale(1)',   opacity: .5 }
+                ], { duration: 320, easing: 'cubic-bezier(.22,.9,.3,1)' });
+            } catch (e) {}
+        }
+    }
+
     if (passed) {
         spawnEffect(cx, cy, fromEl);
-        playDing();
+        if (comboCount < 3) playDing();
         if (allDone) setTimeout(() => { playFanfare(); celebrateAllDone(); }, 380);
     } else {
         fxRipple(cx, cy);
+        comboCount = 0;
     }
 }
 
@@ -3489,13 +3846,13 @@ function getAudioCtx() {
     return audioCtx;
 }
 
-function playDing() {
+function playDing(freq) {
     if (!state.soundOn) return;
     const ctx = getAudioCtx();
     if (!ctx) return;
     const t = ctx.currentTime;
     const osc = ctx.createOscillator(), gain = ctx.createGain();
-    osc.type = 'sine'; osc.frequency.setValueAtTime(880, t);
+    osc.type = 'sine'; osc.frequency.setValueAtTime(freq || 880, t);
     gain.gain.setValueAtTime(0.0001, t);
     gain.gain.exponentialRampToValueAtTime(0.30, t + 0.012);
     gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.30);
@@ -3507,17 +3864,17 @@ function playFanfare() {
     if (!state.soundOn) return;
     const ctx = getAudioCtx();
     if (!ctx) return;
-    const notes = [523.25, 659.25, 783.99];
+    const notes = [523.25, 659.25, 783.99, 1046.50];
     const t0 = ctx.currentTime;
     notes.forEach((freq, i) => {
-        const t = t0 + i * 0.14;
+        const t = t0 + i * 0.12;
         const osc = ctx.createOscillator(), gain = ctx.createGain();
-        osc.type = 'sine'; osc.frequency.setValueAtTime(freq, t);
+        osc.type = 'triangle'; osc.frequency.setValueAtTime(freq, t);
         gain.gain.setValueAtTime(0.0001, t);
         gain.gain.exponentialRampToValueAtTime(0.24, t + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.42);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
         osc.connect(gain); gain.connect(ctx.destination);
-        osc.start(t); osc.stop(t + 0.45);
+        osc.start(t); osc.stop(t + 0.5);
     });
 }
 
@@ -3527,7 +3884,111 @@ function renderSoundBtn() {
 }
 
 /* ==========================================================================
-   11. 自定义 Tab 管理
+   11. 抽签功能（加了趣味彩蛋）
+   ========================================================================== */
+function openRandomModal() {
+    $('#pickerDisplay').textContent = '?';
+    $('#pickerDisplay').style.background = '#FFFAF5';
+    $('#pickerSub').textContent = '点击下方开始抽选';
+    pickerTarget = 'pending';
+    $$('.picker-target button').forEach(b => b.classList.toggle('active', b.dataset.target === 'pending'));
+    openModal('randomModal');
+}
+
+function startRoll() {
+    if (pickerRolling) return;
+    const tab = currentTab();
+    let pool = [];
+    if (pickerTarget === 'pending') {
+        pool = tab.students.filter(s => !tab.passed[s.id]);
+    } else if (pickerTarget === 'passed') {
+        pool = tab.students.filter(s => tab.passed[s.id]);
+    } else {
+        pool = tab.students.slice();
+    }
+
+    if (pool.length === 0) {
+        toast('这个分组里没有人哦！');
+        return;
+    }
+
+    pickerRolling = true;
+    $('#startRollBtn').textContent = '抽选中...';
+    $('#startRollBtn').style.opacity = '.7';
+    $('#startRollBtn').style.pointerEvents = 'none';
+    $('#pickerSub').textContent = '命运的齿轮正在转动...';
+
+    let startTime = Date.now();
+    const duration = 2200;
+    let speed = 50;
+
+    function rollStep() {
+        const elapsed = Date.now() - startTime;
+        if (elapsed < duration) {
+            speed = 50 + Math.pow(elapsed / duration, 3) * 300;
+            
+            const rand = pool[Math.floor(Math.random() * pool.length)];
+            renderPickerDisplay(rand);
+            
+            pickerTimer = setTimeout(rollStep, speed);
+        } else {
+            pickerRolling = false;
+            $('#startRollBtn').textContent = '再抽一次';
+            $('#startRollBtn').style.opacity = '1';
+            $('#startRollBtn').style.pointerEvents = 'auto';
+            
+            const finalStudent = pool[Math.floor(Math.random() * pool.length)];
+            renderPickerDisplay(finalStudent);
+            
+            // 定制文案
+            if (pickerTarget === 'pending') {
+                $('#pickerSub').textContent = '😏 恭喜 ' + finalStudent.name + ' 被选中！奖励多抄写一页生字~';
+            } else if (pickerTarget === 'passed') {
+                $('#pickerSub').textContent = '🌟 恭喜 ' + finalStudent.name + ' 被选中！表现真棒~';
+            } else {
+                $('#pickerSub').textContent = '🎉 恭喜 ' + finalStudent.name + ' 被选中！';
+            }
+            
+            const rect = $('#pickerDisplay').getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            fxConfetti(cx, cy);
+            fxFirework(cx, cy);
+            playFanfare();
+        }
+    }
+    rollStep();
+}
+
+function renderPickerDisplay(student) {
+    const box = $('#pickerDisplay');
+    box.innerHTML = '';
+    
+    if (student.avatarType === 'image' && student.avatarData) {
+        const img = document.createElement('img');
+        img.src = student.avatarData;
+        box.appendChild(img);
+    } else if (student.avatarType === 'emoji' && student.avatarData) {
+        const av = document.createElement('div');
+        av.className = 'av';
+        av.textContent = student.avatarData;
+        av.style.background = candyOf(student.id);
+        box.appendChild(av);
+    } else {
+        const av = document.createElement('div');
+        av.className = 'av';
+        av.textContent = student.name.charAt(0);
+        av.style.background = candyOf(student.id);
+        av.style.color = '#6A5548';
+        box.appendChild(av);
+    }
+    
+    box.style.transform = 'scale(1.1)';
+    setTimeout(() => { box.style.transform = 'scale(1)'; }, 50);
+}
+
+/* ==========================================================================
+   12. 菜单及其它功能
    ========================================================================== */
 function openAddTab() {
     $('#newTabName').value = '';
@@ -3554,9 +4015,6 @@ function confirmAddTab() {
     toast('新任务已创建');
 }
 
-/* ==========================================================================
-   12. 名单管理
-   ========================================================================== */
 function openRoster() {
     const tab = currentTab();
     $('#rosterTabName').textContent = tab.name;
@@ -3717,9 +4175,6 @@ function bulkImport() {
     toast('已导入 ' + lines.length + ' 人，记得点保存');
 }
 
-/* ==========================================================================
-   13. 换头像
-   ========================================================================== */
 function toggleEditMode(force) {
     editMode = (typeof force === 'boolean') ? force : !editMode;
     document.body.classList.toggle('edit-mode', editMode);
@@ -3799,9 +4254,6 @@ function resetAvatar() {
     save(); render(); closeModal('avatarModal'); toast('已恢复默认头像');
 }
 
-/* ==========================================================================
-   14. 记录 / 历史 / CSV
-   ========================================================================== */
 function buildRecordHTML(tab, date, isHistory, records) {
     let passed, pending;
 
@@ -3972,9 +4424,6 @@ function exportCSV() {
     } catch (e) { toast('导出失败'); }
 }
 
-/* ==========================================================================
-   15. 分享 / 二维码
-   ========================================================================== */
 function openQRCode() {
     const box = $('#qrcodeBox');
     box.innerHTML = '';
@@ -4002,9 +4451,6 @@ function openQRCode() {
     openModal('qrcodeModal');
 }
 
-/* ==========================================================================
-   16. 备份恢复
-   ========================================================================== */
 function openBackup() { $('#backupArea').value = ''; openModal('backupModal'); }
 
 function copyBackup() {
@@ -4039,6 +4485,7 @@ function restoreBackup() {
             version: DATA_VERSION,
             activeTab: parsed.activeTab || Object.keys(parsed.tabs)[0],
             soundOn: typeof parsed.soundOn === 'boolean' ? parsed.soundOn : true,
+            pinMode: typeof parsed.pinMode === 'boolean' ? parsed.pinMode : true,
             date: parsed.date || todayStr(),
             tabs: {},
             history: Array.isArray(parsed.history) ? parsed.history : []
@@ -4061,46 +4508,49 @@ function restoreBackup() {
         });
 
         state = newState;
-        save(); renderSoundBtn(); render();
+        save(); renderSoundBtn(); renderPinState(); render();
         closeModal('backupModal'); toast('数据恢复成功');
     } catch (e) { alert('恢复失败：' + e.message); }
 }
 
-/* ==========================================================================
-   17. 长按重置
-   ========================================================================== */
-let resetTimer = null;
-function startResetPress(e) {
-    if (e && e.cancelable) e.preventDefault();
-    const item = $('#resetItem');
-    const fill = item.querySelector('.reset-fill');
-    fill.style.transition = 'none'; fill.style.width = '0%';
-    void fill.offsetWidth;
-    fill.style.transition = '';
-    item.classList.add('pressing');
-    clearTimeout(resetTimer);
-    resetTimer = setTimeout(() => { doReset(); cancelResetPress(); }, 1500);
+function renderPinState() {
+    const badge = $('#pinState');
+    if (badge) {
+        badge.textContent = state.pinMode ? '开' : '关';
+        badge.classList.toggle('off', !state.pinMode);
+    }
+    const btn = $('#pinBtn');
+    if (btn) {
+        btn.classList.toggle('on', !!state.pinMode);
+        btn.title = state.pinMode
+            ? '左侧头像固定：已开启（点一下关闭）'
+            : '左侧头像固定：已关闭（点一下开启）';
+    }
 }
 
-function cancelResetPress() {
-    clearTimeout(resetTimer); resetTimer = null;
-    const item = $('#resetItem');
-    const fill = item.querySelector('.reset-fill');
-    item.classList.remove('pressing');
-    fill.style.transition = 'none'; fill.style.width = '0%';
-    void fill.offsetWidth;
-    fill.style.transition = '';
+function togglePinMode(silent) {
+    state.pinMode = !state.pinMode;
+    save();
+    renderPinState();
+    render();
+    if (!silent) {
+        toast(state.pinMode
+            ? '📌 已开启固定：点一个头像，其他头像位置不动'
+            : '已关闭固定：未交的卡片会自动补位');
+    }
 }
 
+/* 一键重置功能 */
 function doReset() {
     const tab = currentTab();
     pushUndo(tab);
     tab.passed = {}; tab.seq = 0;
-    save(); render(); toast('已重置「' + tab.name + '」');
+    comboCount = 0;
+    save(); render(); toast('已重置「' + tab.name + '」的打卡记录');
 }
 
 /* ==========================================================================
-   18. 事件绑定
+   13. 事件绑定
    ========================================================================== */
 elSoundBtn.addEventListener('click', () => {
     state.soundOn = !state.soundOn; save(); renderSoundBtn();
@@ -4114,6 +4564,24 @@ $('#undoBtn').addEventListener('click', undo);
 $('#saveTodayBtn').addEventListener('click', openSaveToday);
 $('#csvBtn').addEventListener('click', exportCSV);
 
+$('#randomBtn').addEventListener('click', openRandomModal);
+$('#startRollBtn').addEventListener('click', startRoll);
+$$('.picker-target button').forEach(btn => {
+    btn.addEventListener('click', () => {
+        if (pickerRolling) return;
+        pickerTarget = btn.dataset.target;
+        $$('.picker-target button').forEach(b => b.classList.toggle('active', b === btn));
+    });
+});
+
+const pinBtnEl = $('#pinBtn');
+if (pinBtnEl) {
+    pinBtnEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        togglePinMode();
+    });
+}
+
 const elMenu = $('#menu');
 $('#moreBtn').addEventListener('click', (e) => { e.stopPropagation(); elMenu.classList.toggle('active'); });
 elMenu.addEventListener('click', (e) => { if (e.target === elMenu) elMenu.classList.remove('active'); });
@@ -4123,6 +4591,7 @@ $$('.menu-item[data-action]').forEach(btn => {
         const action = btn.dataset.action;
         elMenu.classList.remove('active');
         if (action === 'roster') openRoster();
+        else if (action === 'pin') togglePinMode();
         else if (action === 'avatar') toggleEditMode();
         else if (action === 'record') openRecord();
         else if (action === 'history') openHistory();
@@ -4131,12 +4600,15 @@ $$('.menu-item[data-action]').forEach(btn => {
     });
 });
 
-const resetItem = $('#resetItem');
-resetItem.addEventListener('pointerdown', startResetPress);
-resetItem.addEventListener('pointerup', cancelResetPress);
-resetItem.addEventListener('pointerleave', cancelResetPress);
-resetItem.addEventListener('pointercancel', cancelResetPress);
-resetItem.addEventListener('contextmenu', e => e.preventDefault());
+// 重置按钮点击事件（去掉了长按逻辑，换成 click + 确认弹窗）
+$('#resetItem').addEventListener('click', () => {
+    const tab = currentTab();
+    if (tab.students.length === 0) return;
+    if (confirm('确定要清空「' + tab.name + '」的所有打卡记录吗？\n（如果不小心点错，可以在外面点“撤销”恢复）')) {
+        doReset();
+        elMenu.classList.remove('active');
+    }
+});
 
 $$('[data-close]').forEach(btn => {
     btn.addEventListener('click', () => closeModal(btn.dataset.close));
@@ -4185,7 +4657,7 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('beforeunload', function () { save(); saveProg(); });
 
 /* ==========================================================================
-   19. 时钟与启动
+   14. 时钟与启动
    ========================================================================== */
 function tickClock() {
     const d = new Date();
@@ -4208,7 +4680,6 @@ function tickClock() {
             state.tabs[k].seq = 0;
         });
 
-        /* 跨天重置鲸鱼进度（两种模式都重置，保留当前模式选择） */
         progRemaining = progDuration;
         progRunning = false;
         progEndAt = 0;
@@ -4218,14 +4689,17 @@ function tickClock() {
         saveProg();
         updateProgressUI();
 
+        comboCount = 0;
+
         save(); render(); toast('新的一天，打卡记录已重置');
     }
 }
 
 function boot() {
     state = initState();
-    parseUrlParams(); // 处理扫码参数
+    parseUrlParams();
     renderSoundBtn();
+    renderPinState();
     pinyinReady = detectPinyin();
     render();
 
